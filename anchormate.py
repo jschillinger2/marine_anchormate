@@ -1,3 +1,5 @@
+import subprocess
+
 from enum import Enum
 from gpiozero import Button
 from gpiozero import OutputDevice
@@ -332,16 +334,19 @@ class AnchorBro(MDApp):
         self.current_depth = 20
 
     def io_pin_down_on(self):
+        self.speak("Going Down")
         self.io_pin_all_off()
         if not self.SIMULATED:
             self.io_anchor_down.on()
 
     def io_pin_all_off(self):
+        self.speak("stop")
         if not self.SIMULATED:
             self.io_anchor_down.off()
             self.io_anchor_up.off()
 
     def io_pin_up_on(self):
+        self.speak("Going Up")
         self.io_pin_all_off()
         if not self.SIMULATED:
             self.io_anchor_up.on()
@@ -362,6 +367,15 @@ class AnchorBro(MDApp):
     pulse_detector =  None if SIMULATED else Button(PIN_ROTATION_INDICATOR, pull_up=None, bounce_time=0.05)
 
     # Attach the event handler function to be called on rising edges
-    if not SIMULATED: pulse_detector.when_pressed = on_pulse    
+    if not SIMULATED: pulse_detector.when_pressed = on_pulse
+
+    def speak(self, text):
+        try:
+            # The command to execute Festival and send text to it
+            command = f'echo "{text}" | festival --tts'
+            # Execute the command
+            subprocess.run(command, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"An error occurred: {e}")
         
 AnchorBro().run()
