@@ -150,37 +150,65 @@ KV = '''
 
 <ManualScreen>
 
-    MDButton:
-        pos_hint: {"center_x": .5, "center_y": .3}
-        width: root.width*0.3
-        height: root.height*0.2
-        style: "tonal"
+    MDBoxLayout:
+        orientation: "horizontal"
+        padding: 10
+        spacing: 10
 
-        on_press: app.man_anchor_down_press()
-        on_release: app.man_anchor_down_release()
+        MDBoxLayout:
+            orientation: "horizontal"
+            spacing: 10
 
-        MDButtonIcon:
-            icon: "menu-down"
+            MDSlider:
+                id: auto_slider_current
 
-        MDButtonText:
-            text: "Down"
+                orientation: "vertical"
+                width: root.width*0.2
+                height: root.height*0.9
+                min: 0
+                max: 20
+                value: 20-app.current_depth
+                disabled: True
 
-    MDButton:
-        pos_hint: {"center_x": .5, "center_y": .8}
-        width: root.width*0.3
-        height: root.height*0.2
-        style: "tonal"
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: 10
 
-        on_press: app.man_anchor_up_press()
-        on_release: app.man_anchor_up_release()
+            MDLabel:
+                text: f"Current depth: {20-int(auto_slider_current.value)}m"
+                halign: "center"
 
-        MDButtonIcon:
-            icon: "menu-up"
-            icon_size: "200sp"
+            MDButton:
+                pos_hint: {"center_x": .5}
+                width: root.width*0.3
+                height: root.height*0.2
+                style: "tonal"
 
-        MDButtonText:
-            text: "Up"
-            font_size: "40sp"
+                on_press: app.man_anchor_up_press()
+                on_release: app.man_anchor_up_release()
+
+                MDButtonIcon:
+                    icon: "menu-up"
+                    icon_size: "200sp"
+
+                MDButtonText:
+                    text: "Up"
+                    font_size: "40sp"
+
+            MDButton:
+                pos_hint: {"center_x": .5}
+                width: root.width*0.3
+                height: root.height*0.2
+                style: "tonal"
+
+                on_press: app.man_anchor_down_press()
+                on_release: app.man_anchor_down_release()
+
+                MDButtonIcon:
+                    icon: "menu-down"
+
+                MDButtonText:
+                    text: "Down"
 
 MDBoxLayout:
     orientation: "vertical"
@@ -266,20 +294,27 @@ class AnchorBro(MDApp):
     def build(self):        
         return Builder.load_string(KV)
 
-    def man_anchor_down_press(a):
+    def man_anchor_down_press(self):
         print("Anchor Down Start")
+        current_direction = Direction.DOWN
+        self.io_pin_down_on()
 
     def man_anchor_down_release(a):
         print("Anchor Stop")
+        current_direction = Direction.NONE
+        self.io_pin_all_off()        
 
     def man_anchor_up_press(a):
         print("Anchor Up Start")
+        current_direction = Direction.UP
+        self.io_pin_up_on()
 
     def man_anchor_up_release(a):
         print("Anchor Stop")
+        current_direction = Direction.NONE
+        self.io_pin_all_off()         
 
     def auto_slider_move(a, value):
-        # print(f"Current slider value: {value}")
         target_depth = 20-value
 
     def auto_go(a):
@@ -296,20 +331,20 @@ class AnchorBro(MDApp):
         print("Anchor-calib set at botton")
         self.current_depth = 20
 
-    def io_pin_down_on():
-        io_anchor_down.on()
+    def io_pin_down_on(self):
+        self.io_pin_all_off()
+        if not self.SIMULATED:
+            self.io_anchor_down.on()
 
-    def io_pin_down_off():
-        io_anchor_down.off()
+    def io_pin_all_off(self):
+        if not self.SIMULATED:
+            self.io_anchor_down.off()
+            self.io_anchor_up.off()
 
-    def io_pin_up_on():
-        io_anchor_up.on()
-
-    def io_pin_up_off():
-        io_anchor_up.off()
-
-    # Define the GPIO pin number you want to listen on
-    PIN_NUMBER = 17  # Replace 17 with your specific GPIO pin number
+    def io_pin_up_on(self):
+        self.io_pin_all_off()
+        if not self.SIMULATED:
+            self.io_anchor_up.on()
 
     # Define a function to be called whenever the pin goes from LOW to HIGH
     def on_pulse():
