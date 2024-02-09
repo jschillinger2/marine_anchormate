@@ -1,4 +1,5 @@
 import subprocess
+import pygame
 
 from enum import Enum
 from gpiozero import Button
@@ -13,6 +14,7 @@ from kivy.properties import StringProperty
 from kivymd.app import MDApp
 from kivymd.uix.navigationbar import MDNavigationBar, MDNavigationItem
 from kivymd.uix.screen import MDScreen
+
 
 
 class BaseMDNavigationItem(MDNavigationItem):
@@ -259,6 +261,9 @@ class AnchorBro(MDApp):
 
     # switch to TRUE if you dont want to call the IO ports (for testing)
     SIMULATED = True
+
+    # path to ding sound
+    SOUND_DING_PATH = "res/ding.mp3"
     
     # chain length in meter
     CHAIN_LENGTH=20
@@ -301,28 +306,28 @@ class AnchorBro(MDApp):
         current_direction = Direction.DOWN
         self.io_pin_down_on()
 
-    def man_anchor_down_release(a):
+    def man_anchor_down_release(self):
         print("Anchor Stop")
         current_direction = Direction.NONE
         self.io_pin_all_off()        
 
-    def man_anchor_up_press(a):
+    def man_anchor_up_press(self):
         print("Anchor Up Start")
         current_direction = Direction.UP
         self.io_pin_up_on()
 
-    def man_anchor_up_release(a):
+    def man_anchor_up_release(self):
         print("Anchor Stop")
         current_direction = Direction.NONE
         self.io_pin_all_off()         
 
-    def auto_slider_move(a, value):
+    def auto_slider_move(self, value):
         target_depth = 20-value
 
-    def auto_go(a):
+    def auto_go(self):
         print("Adjust Start")
 
-    def auto_stop(a):
+    def auto_stop(self):
         print("Adjust Stop")
         
     def calib_top(self):
@@ -335,6 +340,7 @@ class AnchorBro(MDApp):
 
     def io_pin_down_on(self):
         self.speak("Going Down")
+        self.play_ding()
         self.io_pin_all_off()
         if not self.SIMULATED:
             self.io_anchor_down.on()
@@ -377,5 +383,24 @@ class AnchorBro(MDApp):
             subprocess.run(command, shell=True, check=True)
         except subprocess.CalledProcessError as e:
             print(f"An error occurred: {e}")
+
+    def play_mp3(path_to_mp3):
+    # Initialize pygame mixer
+        pygame.mixer.init()
+
+        # Load the MP3 music file
+        pygame.mixer.music.load(path_to_mp3)
+
+        # Play the music
+        pygame.mixer.music.play()
+
+        # Wait for the music to play. Without this, the script may end and stop the music.
+        while pygame.mixer.music.get_busy():
+            time.sleep(1)
+
+    # plays a ding sound
+    def play_ding():
+        play_mp3(SOUND_DING_PATH)
+        
         
 AnchorBro().run()
