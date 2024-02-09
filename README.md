@@ -28,6 +28,15 @@ pip3 install pigame
 pip3 install https://github.com/kivymd/KivyMD/archive/master.zip
 ```
 
+# Run
+
+You can just execute anchormate.py.
+
+```
+python3 anchormate.py
+```
+
+
 # AnchorMate Configuration
 
 AnchorMate is designed with customization in mind, allowing users to tailor the application to their specific needs through various settings. Below are the available configuration options:
