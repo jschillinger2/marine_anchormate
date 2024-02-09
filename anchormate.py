@@ -35,231 +35,6 @@ class ManualScreen(MDScreen):
 class AutoScreen(MDScreen):
     image_size = StringProperty()
 
-KV = '''
-
-<BaseMDNavigationItem>
-
-    MDNavigationItemIcon:
-        icon: root.icon
-
-    MDNavigationItemLabel:
-        text: root.text
-
-<AutoScreen>
-
-    MDBoxLayout:
-        orientation: "horizontal"
-        padding: 10
-        spacing: 10
-
-        MDBoxLayout:
-            orientation: "horizontal"
-            spacing: 10
-
-            MDSlider:
-                id: auto_slider_current
-
-                orientation: "vertical"
-                width: root.width*0.2
-                height: root.height*0.9
-                min: 0
-                max: app.CHAIN_LENGTH
-                value: app.CHAIN_LENGTH-app.current_depth
-                disabled: True
-
-            MDSlider:
-                id: auto_slider_target
-
-                orientation: "vertical"
-                width: root.width*0.2
-                height: root.height*0.9
-                track_color_active: "red"
-                track_color_inactive: "red"
-                hint: True
-                min: 0
-                max: app.CHAIN_LENGTH
-                value: app.CHAIN_LENGTH-app.target_depth
-
-                on_value: app.auto_slider_move(self.value)
-
-
-        MDBoxLayout:
-            orientation: "vertical"
-            spacing: 10
-
-            MDLabel:
-                text: f"Current depth: {format(app.current_depth, '.1f')}m"
-                halign: "center"
-
-            MDLabel:
-                text: f"Target depth: {format(app.target_depth,'.1f')}m"
-                halign: "center"
-
-            MDLabel:
-                text: f"Move by: {format(app.target_depth-app.current_depth,'+.1f')}m"
-                halign: "center"
-
-            MDButton:
-                text: "Go"
-                pos_hint: {"center_x": 0.5}
-                width: root.width*0.2
-                height: root.height*0.2
-
-                on_press: app.auto_go()
-
-                MDButtonIcon:
-                    icon: "language-go"
-
-                MDButtonText:
-                    text: "Go!"
-
-            MDButton:
-                text: "Stop"
-                pos_hint: {"center_x": 0.5}
-                width: root.width*0.2
-                height: root.height*0.2
-
-                on_press: app.auto_stop()
-
-                MDButtonIcon:
-                    icon: "stop"
-
-                MDButtonText:
-                    text: "Stop!"
-
-<ConfigScreen>
-
-    MDButton:
-        on_press: app.calib_bottom()
-
-        pos_hint: {"center_x": .5, "center_y": .3}
-        width: root.width*0.5
-        height: root.height*0.2
-
-        MDButtonIcon:
-            icon: "set-split"
-
-        MDButtonText:
-            text: "Set: Anchor is down (end of chain)!"
-
-    MDButton:
-        on_press: app.calib_top()
-
-        pos_hint: {"center_x": .5, "center_y": .8}
-        width: root.width*0.5
-        height: root.height*0.2
-
-        MDButtonIcon:
-            icon: "set-split"
-            icon_size: "200sp"
-
-        MDButtonText:
-            text: "Set: Anchor is up!"
-            font_size: "40sp"
-
-<ManualScreen>
-
-    MDBoxLayout:
-        orientation: "horizontal"
-        padding: 10
-        spacing: 10
-
-        MDBoxLayout:
-            orientation: "horizontal"
-            spacing: 10
-
-            MDSlider:
-                id: auto_slider_current
-
-                orientation: "vertical"
-                width: root.width*0.2
-                height: root.height*0.9
-                min: 0
-                max: app.CHAIN_LENGTH
-                value: app.CHAIN_LENGTH-app.current_depth
-                disabled: True
-
-        MDBoxLayout:
-            orientation: "vertical"
-            spacing: 10
-
-            MDLabel:
-                text: f"Current depth: {format(app.current_depth,'.1f')}m"
-                halign: "center"
-
-            MDButton:
-                pos_hint: {"center_x": .5}
-                width: root.width*0.3
-                height: root.height*0.2
-                style: "tonal"
-
-                on_press: app.man_anchor_up_press()
-                on_release: app.man_anchor_up_release()
-
-                MDButtonIcon:
-                    icon: "menu-up"
-                    icon_size: "200sp"
-
-                MDButtonText:
-                    text: "Up"
-                    font_size: "40sp"
-
-            MDButton:
-                pos_hint: {"center_x": .5}
-                width: root.width*0.3
-                height: root.height*0.2
-                style: "tonal"
-
-                on_press: app.man_anchor_down_press()
-                on_release: app.man_anchor_down_release()
-
-                MDButtonIcon:
-                    icon: "menu-down"
-
-                MDButtonText:
-                    text: "Down"
-
-MDBoxLayout:
-    orientation: "vertical"
-    md_bg_color: self.theme_cls.backgroundColor
-
-    MDScreenManager:
-        id: screen_manager
-
-        ManualScreen:
-            name: "Manual"
-            image_size: "800"
-
-        AutoScreen:
-            name: "Auto"
-            image_size: "1024"
-            orientation: "horizontal"
-
-        ConfigScreen:
-            name: "Calibrate"
-            image_size: "600"
-
-    MDNavigationBar:
-        on_switch_tabs: app.on_switch_tabs(*args)
-
-        BaseMDNavigationItem
-            icon: "car-shift-pattern"
-            text: "Manual"
-            active: True
-
-        BaseMDNavigationItem
-            icon: "car-child-seat"
-            text: "Auto"
-
-        BaseMDNavigationItem
-            icon: "tools"
-            text: "Calibrate"
-
-        MDLabel:
-            text: f"{app.debug_msg}"
-            halign: "center"
-
-'''
 
 class Direction(Enum):
     UP = 1
@@ -268,28 +43,41 @@ class Direction(Enum):
 
 class AnchorMate(MDApp):
 
+    def read_properties_file(filepath):
+        properties = {}
+        with open(filepath, 'r') as file:
+            for line in file:
+                line = line.strip()
+                if line and not line.startswith('#'):  # ignore comments and empty lines
+                    key, value = line.split('=', 1)
+                    properties[key.strip()] = value.strip()
+        return properties
+
+    PROPERTIES_FILE_PATH = 'anchormate.properties'  # Adjust the path as needed
+    config = read_properties_file(PROPERTIES_FILE_PATH)
+
     # switch to TRUE if you dont want to call the IO ports (for testing)
-    SIMULATED = True
+    SIMULATED = config.get('SIMULATED') == 'True'
 
     # switch on if you want to see debug info on the screen
-    DEBUG = True
+    DEBUG = config.get('DEBUG') == 'True'
 
     # path to ding sound
     SOUND_DING_PATH = "res/sounds/ding.mp3"
     
     # chain length in meter
-    CHAIN_LENGTH=20
+    CHAIN_LENGTH=float(config.get('CHAIN_LENGTH', 0))
 
     # how many meters does the chain move for 1 rotation
-    LENGTH_PER_ROTATION = 0.25
+    LENGTH_PER_ROTATION = float(config.get('LENGTH_PER_ROTATION', 0))
 
     # minimum length to pull the anchor up, allow user to do the rest manual
-    MIN_DEPTH = 2
+    MIN_DEPTH = float(config.get('MIN_DEPTH', 0))
     
     # PINS
-    PIN_ANCHOR_UP = 17
-    PIN_ANCHOR_DOWN = 18
-    PIN_ROTATION_INDICATOR = 19
+    PIN_ANCHOR_UP = int(config.get('PIN_ANCHOR_UP', 0))
+    PIN_ANCHOR_DOWN = int(config.get('PIN_ANCHOR_DOWN', 0))
+    PIN_ROTATION_INDICATOR = int(config.get('PIN_ROTATION_INDICATOR', 0))
 
     # the direction of the anchor movement
     current_direction = Direction.NONE
@@ -347,7 +135,8 @@ class AnchorMate(MDApp):
         self.root.ids.screen_manager.current = item_text
 
     def build(self):        
-        return Builder.load_string(KV)
+        # return Builder.load_string(KV)
+        Builder.load_file('anchormate.kv')
 
     def man_anchor_down_press(self):
         print("Anchor Down Start")
@@ -506,7 +295,10 @@ class AnchorMate(MDApp):
         
     def update_debug_msg(self, *args):
         # Update debug_msg to reflect the current state of the BooleanProperties
-        self.debug_msg = f"U:{self.debug_pinstate_up}, D:{self.debug_pinstate_down}, P:{self.debug_pinstate_pulse}"
+        if self.DEBUG:
+            self.debug_msg = f"U:{self.debug_pinstate_up}, D:{self.debug_pinstate_down}, P:{self.debug_pinstate_pulse}"
+        else:
+            self.debug_msg = ""
 
         
 AnchorMate().run()
