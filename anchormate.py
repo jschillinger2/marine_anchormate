@@ -1,5 +1,8 @@
 import subprocess
 import pygame
+import time
+
+from kivy.clock import Clock
 
 from enum import Enum
 from gpiozero import Button
@@ -7,13 +10,15 @@ from gpiozero import OutputDevice
 from time import sleep
 
 from kivy.properties import NumericProperty
+from kivy.properties import StringProperty
+from kivy.properties import BooleanProperty
 
 from kivy.lang import Builder
-from kivy.properties import StringProperty
-
 from kivymd.app import MDApp
 from kivymd.uix.navigationbar import MDNavigationBar, MDNavigationItem
 from kivymd.uix.screen import MDScreen
+
+from threading import Thread
 
 
 
@@ -58,8 +63,8 @@ KV = '''
                 width: root.width*0.2
                 height: root.height*0.9
                 min: 0
-                max: 20
-                value: 20-app.current_depth
+                max: app.CHAIN_LENGTH
+                value: app.CHAIN_LENGTH-app.current_depth
                 disabled: True
 
             MDSlider:
@@ -72,8 +77,8 @@ KV = '''
                 track_color_inactive: "red"
                 hint: True
                 min: 0
-                max: 20
-                value: 20-app.target_depth
+                max: app.CHAIN_LENGTH
+                value: app.CHAIN_LENGTH-app.target_depth
 
                 on_value: app.auto_slider_move(self.value)
 
@@ -83,15 +88,15 @@ KV = '''
             spacing: 10
 
             MDLabel:
-                text: f"Current depth: {20-int(auto_slider_current.value)}m"
+                text: f"Current depth: {format(app.current_depth, '.1f')}m"
                 halign: "center"
 
             MDLabel:
-                text: f"Target depth: {20-int(auto_slider_target.value)}m"
+                text: f"Target depth: {format(app.target_depth,'.1f')}m"
                 halign: "center"
 
             MDLabel:
-                text: f"Move by: {int(auto_slider_current.value)-int(auto_slider_target.value)}m"
+                text: f"Move by: {format(app.target_depth-app.current_depth,'+.1f')}m"
                 halign: "center"
 
             MDButton:
@@ -170,8 +175,8 @@ KV = '''
                 width: root.width*0.2
                 height: root.height*0.9
                 min: 0
-                max: 20
-                value: 20-app.current_depth
+                max: app.CHAIN_LENGTH
+                value: app.CHAIN_LENGTH-app.current_depth
                 disabled: True
 
         MDBoxLayout:
@@ -179,7 +184,7 @@ KV = '''
             spacing: 10
 
             MDLabel:
-                text: f"Current depth: {20-int(auto_slider_current.value)}m"
+                text: f"Current depth: {format(app.current_depth,'.1f')}m"
                 halign: "center"
 
             MDButton:
@@ -250,6 +255,10 @@ MDBoxLayout:
             icon: "tools"
             text: "Calibrate"
 
+        MDLabel:
+            text: f"{app.debug_msg}"
+            halign: "center"
+
 '''
 
 class Direction(Enum):
@@ -257,13 +266,16 @@ class Direction(Enum):
     DOWN = 2
     NONE = 3
 
-class AnchorBro(MDApp):
+class AnchorMate(MDApp):
 
     # switch to TRUE if you dont want to call the IO ports (for testing)
     SIMULATED = True
 
+    # switch on if you want to see debug info on the screen
+    DEBUG = True
+
     # path to ding sound
-    SOUND_DING_PATH = "res/ding.mp3"
+    SOUND_DING_PATH = "res/sounds/ding.mp3"
     
     # chain length in meter
     CHAIN_LENGTH=20
@@ -271,6 +283,9 @@ class AnchorBro(MDApp):
     # how many meters does the chain move for 1 rotation
     LENGTH_PER_ROTATION = 0.25
 
+    # minimum length to pull the anchor up, allow user to do the rest manual
+    MIN_DEPTH = 2
+    
     # PINS
     PIN_ANCHOR_UP = 17
     PIN_ANCHOR_DOWN = 18
@@ -281,14 +296,47 @@ class AnchorBro(MDApp):
     
     # current depth of anchor
     current_depth = NumericProperty(5)
-
+    last_current_depth = -1
+    
     # target depth chosen in auto mode
     target_depth = NumericProperty(0)
 
+    # set in automode if the cancel button is pushed
+    auto_cancel=False
+
+    debug_msg = StringProperty("debug text")
+    debug_pinstate_down = BooleanProperty(False)
+    debug_pinstate_up = BooleanProperty(False)
+    debug_pinstate_pulse = BooleanProperty(False)
+    
     # ios
     io_anchor_up = None if SIMULATED else OutputDevice(PIN_ANCHOR_UP)
     io_anchor_down = None if SIMULATED else OutputDevice(PIN_ANCHOR_DOWN)
-    
+
+    def __init__(self, **kwargs):
+        super(AnchorMate, self).__init__(**kwargs)
+        
+        # Set listeners for each BooleanProperty
+        self.bind(debug_pinstate_up=self.update_debug_msg)
+        self.bind(debug_pinstate_down=self.update_debug_msg)
+        self.bind(debug_pinstate_pulse=self.update_debug_msg)
+
+        # Set listeners to current depth to trigger TTS
+        self.bind(current_depth=self.update_depth_tts)
+
+        # Initialize the debug message
+        self.update_debug_msg()
+
+        # set timer to simulate anchor pulse
+        if self.SIMULATED:
+            Clock.schedule_interval(self.on_pulse_simulated_pressed, 2)   
+        self.speak("Anchor Control is ready")    
+
+    def update_depth_tts(self,a,b):
+        if int(self.current_depth) != int(self.last_current_depth):
+            self.speak(f"{round(self.current_depth)} meters")
+        self.last_current_depth = self.current_depth
+        
     def on_switch_tabs(
         self,
         bar: MDNavigationBar,
@@ -303,79 +351,129 @@ class AnchorBro(MDApp):
 
     def man_anchor_down_press(self):
         print("Anchor Down Start")
-        current_direction = Direction.DOWN
+        self.current_direction = Direction.DOWN
         self.io_pin_down_on()
 
     def man_anchor_down_release(self):
         print("Anchor Stop")
-        current_direction = Direction.NONE
+        self.current_direction = Direction.NONE
         self.io_pin_all_off()        
 
     def man_anchor_up_press(self):
         print("Anchor Up Start")
-        current_direction = Direction.UP
+        self.current_direction = Direction.UP
         self.io_pin_up_on()
 
     def man_anchor_up_release(self):
         print("Anchor Stop")
-        current_direction = Direction.NONE
+        self.current_direction = Direction.NONE
         self.io_pin_all_off()         
 
     def auto_slider_move(self, value):
-        target_depth = 20-value
+        self.target_depth = self.CHAIN_LENGTH-value
 
     def auto_go(self):
-        print("Adjust Start")
+        self.auto_cancel=False
+        distancetomove = self.target_depth - self.current_depth
+        print(f"Auto Adjust Start. Moving {distancetomove} meters")
+        self.speak_process("Adjusting anchor height. Press Stop to cancel.")
+        Thread(target=self.auto_go_process, args=(distancetomove,)).start()
 
+    def auto_go_process(self, delta):
+        if delta > 1:
+            self.man_anchor_down_press()
+            while (self.current_depth<self.target_depth) and not self.auto_cancel:
+                time.sleep(0.1)
+            self.man_anchor_down_release()
+            if not self.auto_cancel:
+                self.speak("Anchor is at target depth")
+            else:
+                self.speak("Anchor adjustment cancelled")
+        else:
+            print("xx")
+            self.man_anchor_up_press()
+            while self.current_depth>self.target_depth and self.current_depth>self.MIN_DEPTH and not self.auto_cancel:
+                print( self.current_depth)
+                print( self.target_depth)
+                time.sleep(0.1)
+            self.man_anchor_up_release()
+            if not self.auto_cancel:
+                if self.target_depth<self.MIN_DEPTH:
+                    self.speak("Anchor is at minimum depth. Use manual for the rest.")
+                else:    
+                    self.speak("Anchor is at target depth")
+            else:
+                self.speak("Anchor adjustment cancelled")            
+        
     def auto_stop(self):
-        print("Adjust Stop")
+        print("Auto Adjust Stop")
+        self.auto_cancel = True
+        self.speak("Anchor adjustment cancelled")
         
     def calib_top(self):
+        self.speak("Anchor calibrated")
         print("Anchor-calib set at top")
         self.current_depth = 0
 
     def calib_bottom(self):
         print("Anchor-calib set at botton")
-        self.current_depth = 20
+        self.speak("Anchor calibrated")
+        self.current_depth = self.CHAIN_LENGTH
 
     def io_pin_down_on(self):
-        self.speak("Going Down")
-        self.play_ding()
         self.io_pin_all_off()
+        self.debug_pinstate_down = True
         if not self.SIMULATED:
             self.io_anchor_down.on()
 
     def io_pin_all_off(self):
-        self.speak("stop")
+        self.debug_pinstate_up = False
+        self.debug_pinstate_down = False        
         if not self.SIMULATED:
             self.io_anchor_down.off()
             self.io_anchor_up.off()
 
     def io_pin_up_on(self):
-        self.speak("Going Up")
         self.io_pin_all_off()
+        self.debug_pinstate_up = True
         if not self.SIMULATED:
             self.io_anchor_up.on()
 
+    # called by time in simulation mode to simulate pulse from rotation
+    def on_pulse_simulated_pressed(self, a):
+       self.on_pulse_on()
+       Clock.schedule_once(self.on_pulse_simulated_release, 0.5)
+       
+    def on_pulse_simulated_release(self, a):
+       # time.sleep(1) 
+       self.on_pulse_off()
+     
     # Define a function to be called whenever the pin goes from LOW to HIGH
-    def on_pulse():
-        global current_depth
-        print(f"Pulse detected! Current Depth: {current_depth}")
-        if current_direction == Direction.UP:
-            current_depth -= LENGTH_PER_ROTATION
-        elif current_direction == Direction.DOWN:
-            current_depth += LENGTH_PER_ROTATION
+    def on_pulse_on(self):
+        #global current_depth
+        print(f"Pulse detected! Current Depth: {self.current_depth}")
+        self.debug_pinstate_pulse = True
+        if self.current_direction == Direction.UP:
+            self.current_depth -= self.LENGTH_PER_ROTATION
+        elif self.current_direction == Direction.DOWN:
+            self.current_depth += self.LENGTH_PER_ROTATION
         else:
             print("Anchor moving despite no engine")
+        self.play_ding()
 
+    def on_pulse_off(self):
+        print(f"Pulse release detected!")
+        self.debug_pinstate_pulse = False
+        
     # Setup the pin as a 'Button', treat rising edges as button presses
     # The 'bounce_time' parameter is optional and can be adjusted based on your needs
     pulse_detector =  None if SIMULATED else Button(PIN_ROTATION_INDICATOR, pull_up=None, bounce_time=0.05)
 
     # Attach the event handler function to be called on rising edges
-    if not SIMULATED: pulse_detector.when_pressed = on_pulse
-
-    def speak(self, text):
+    if not SIMULATED: pulse_detector.when_pressed = on_pulse_on(self)
+    if not SIMULATED: pulse_detector.when_released = on_pulse_off(self)
+    
+    def speak_process(self, text):
         try:
             # The command to execute Festival and send text to it
             command = f'echo "{text}" | festival --tts'
@@ -384,8 +482,11 @@ class AnchorBro(MDApp):
         except subprocess.CalledProcessError as e:
             print(f"An error occurred: {e}")
 
-    def play_mp3(path_to_mp3):
-    # Initialize pygame mixer
+    def speak(self, text):
+        Thread(target=self.speak_process, args=(text,)).start()
+
+    def play_mp3(self, path_to_mp3):
+        # Initialize pygame mixer
         pygame.mixer.init()
 
         # Load the MP3 music file
@@ -399,8 +500,13 @@ class AnchorBro(MDApp):
             time.sleep(1)
 
     # plays a ding sound
-    def play_ding():
-        play_mp3(SOUND_DING_PATH)
+    def play_ding(self):
+        Thread(target=self.play_mp3, args=(self.SOUND_DING_PATH,)).start()
+        # self.play_mp3(self.SOUND_DING_PATH)
         
+    def update_debug_msg(self, *args):
+        # Update debug_msg to reflect the current state of the BooleanProperties
+        self.debug_msg = f"U:{self.debug_pinstate_up}, D:{self.debug_pinstate_down}, P:{self.debug_pinstate_pulse}"
+
         
-AnchorBro().run()
+AnchorMate().run()
