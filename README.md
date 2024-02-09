@@ -1,24 +1,32 @@
 # marine_anchormate
-Anchor control to run on Raspberry Pi 
+
+Anchor control to run on Raspberry Pi. 
 
 # Install
 
 ## Install Linux packages
 
+```
 apt install python3
 apt install xclip
 apt install festival
+```
 
 ## Setup Python
 
-Suggest to set up virtual environment in your target folder
+Suggest to set up virtual environment in your target folder.
+
+```
 python3 -m venv path/to/venv
+```
 
 ## Install Python libaries
 
+```
 pip3 install gpiozero
 pip3 install pigame
 pip3 install https://github.com/kivymd/KivyMD/archive/master.zip
+```
 
 # AnchorMate Configuration
 
