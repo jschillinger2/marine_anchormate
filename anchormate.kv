@@ -1,222 +1,197 @@
+MDBottomNavigation:
+    panel_color: "lightgrey"
+    selected_color_background: "navy"
+    text_color_active: "white"        
 
-<BaseMDNavigationItem>
 
-    MDNavigationItemIcon:
-        icon: root.icon
-
-    MDNavigationItemLabel:
-        text: root.text
-
-<AutoScreen>
-
-    MDBoxLayout:
-        orientation: "horizontal"
-        padding: 10
-        spacing: 10
-
+    MDBottomNavigationItem:
+        name: 'manual'
+        text: 'Manual'
+        icon: 'car-shift-pattern'
+        
         MDBoxLayout:
             orientation: "horizontal"
+            padding: 10
             spacing: 10
 
-            MDSlider:
-                id: auto_slider_current
+            MDBoxLayout:
+                orientation: "horizontal"
+                spacing: 10
 
+                MDSlider:
+                    id: auto_slider_current
+
+                    orientation: "vertical"
+                    width: root.width*0.2
+                    height: root.height*0.9
+                    min: 0
+                    max: app.CHAIN_LENGTH
+                    value: app.CHAIN_LENGTH-app.current_depth
+                    disabled: True
+                    track_color_disabled: "lightblue"
+                    thumb_color_disabled: "lightblue"
+                    
+                    
+
+            MDBoxLayout:
                 orientation: "vertical"
-                width: root.width*0.2
-                height: root.height*0.9
-                min: 0
-                max: app.CHAIN_LENGTH
-                value: app.CHAIN_LENGTH-app.current_depth
-                disabled: True
+                spacing: 10
 
-            MDSlider:
-                id: auto_slider_target
+                MDLabel:
+                    text: f"Current depth: {format(app.current_depth,'.1f')}m"
+                    halign: "center"
 
-                orientation: "vertical"
-                width: root.width*0.2
-                height: root.height*0.9
-                track_color_active: "red"
-                track_color_inactive: "red"
-                hint: True
-                min: 0
-                max: app.CHAIN_LENGTH
-                value: app.CHAIN_LENGTH-app.target_depth
-
-                on_value: app.auto_slider_move(self.value)
-
-
-        MDBoxLayout:
-            orientation: "vertical"
-            spacing: 10
-
-            MDLabel:
-                text: f"Current depth: {format(app.current_depth, '.1f')}m"
-                halign: "center"
-
-            MDLabel:
-                text: f"Target depth: {format(app.target_depth,'.1f')}m"
-                halign: "center"
-
-            MDLabel:
-                text: f"Move by: {format(app.target_depth-app.current_depth,'+.1f')}m"
-                halign: "center"
-
-            MDButton:
-                text: "Go"
-                pos_hint: {"center_x": 0.5}
-                width: root.width*0.2
-                height: root.height*0.2
-
-                on_press: app.auto_go()
-
-                MDButtonIcon:
-                    icon: "language-go"
-
-                MDButtonText:
-                    text: "Go!"
-
-            MDButton:
-                text: "Stop"
-                pos_hint: {"center_x": 0.5}
-                width: root.width*0.2
-                height: root.height*0.2
-
-                on_press: app.auto_stop()
-
-                MDButtonIcon:
-                    icon: "stop"
-
-                MDButtonText:
-                    text: "Stop!"
-
-<ConfigScreen>
-
-    MDButton:
-        on_press: app.calib_bottom()
-
-        pos_hint: {"center_x": .5, "center_y": .3}
-        width: root.width*0.5
-        height: root.height*0.2
-
-        MDButtonIcon:
-            icon: "set-split"
-
-        MDButtonText:
-            text: "Set: Anchor is down (end of chain)!"
-
-    MDButton:
-        on_press: app.calib_top()
-
-        pos_hint: {"center_x": .5, "center_y": .8}
-        width: root.width*0.5
-        height: root.height*0.2
-
-        MDButtonIcon:
-            icon: "set-split"
-            icon_size: "200sp"
-
-        MDButtonText:
-            text: "Set: Anchor is up!"
-            font_size: "40sp"
-
-<ManualScreen>
-
-    MDBoxLayout:
-        orientation: "horizontal"
-        padding: 10
-        spacing: 10
-
-        MDBoxLayout:
-            orientation: "horizontal"
-            spacing: 10
-
-            MDSlider:
-                id: auto_slider_current
-
-                orientation: "vertical"
-                width: root.width*0.2
-                height: root.height*0.9
-                min: 0
-                max: app.CHAIN_LENGTH
-                value: app.CHAIN_LENGTH-app.current_depth
-                disabled: True
-
-        MDBoxLayout:
-            orientation: "vertical"
-            spacing: 10
-
-            MDLabel:
-                text: f"Current depth: {format(app.current_depth,'.1f')}m"
-                halign: "center"
-
-            MDButton:
-                pos_hint: {"center_x": .5}
-                width: root.width*0.3
-                height: root.height*0.2
-                style: "tonal"
-
-                on_press: app.man_anchor_up_press()
-                on_release: app.man_anchor_up_release()
-
-                MDButtonIcon:
+                MDIconButton:
+                    pos_hint: {"center_x": .5}
+                    width: root.width*0.3
+                    height: root.height*0.2
+                    style: "tonal"
+                    theme_text_color: "Custom"
+                    text_color: 0, 0.333, 0.494, 1
+                    on_press: app.man_anchor_up_press()
+                    on_release: app.man_anchor_up_release()
                     icon: "menu-up"
                     icon_size: "200sp"
-
-                MDButtonText:
                     text: "Up"
                     font_size: "40sp"
 
-            MDButton:
-                pos_hint: {"center_x": .5}
-                width: root.width*0.3
-                height: root.height*0.2
-                style: "tonal"
-
-                on_press: app.man_anchor_down_press()
-                on_release: app.man_anchor_down_release()
-
-                MDButtonIcon:
+                MDIconButton:
+                    pos_hint: {"center_x": .5}
+                    width: root.width*0.3
+                    height: root.height*0.2
+                    style: "tonal"
+                    theme_text_color: "Custom"
+                    text_color: 0, 0.333, 0.494, 1
+                    icon_size: "200sp"
+                    on_press: app.man_anchor_down_press()
+                    on_release: app.man_anchor_down_release()
                     icon: "menu-down"
-
-                MDButtonText:
                     text: "Down"
 
-MDBoxLayout:
-    orientation: "vertical"
-    md_bg_color: self.theme_cls.backgroundColor
+                MDLabel:
+                    text: f"{app.debug_msg}"
+                    halign: "center"
 
-    MDScreenManager:
-        id: screen_manager
-
-        ManualScreen:
-            name: "Manual"
-            image_size: "800"
-
-        AutoScreen:
-            name: "Auto"
-            image_size: "1024"
+    
+    MDBottomNavigationItem:
+        name: 'auto'
+        text: 'Automatic'
+        icon: 'car-child-seat'
+    
+        MDBoxLayout:
             orientation: "horizontal"
+            padding: 10
+            spacing: 10
 
-        ConfigScreen:
-            name: "Calibrate"
-            image_size: "600"
+            MDBoxLayout:
+                orientation: "horizontal"
+                spacing: 10
 
-    MDNavigationBar:
-        on_switch_tabs: app.on_switch_tabs(*args)
+                MDSlider:
+                    id: auto_slider_current
 
-        BaseMDNavigationItem
-            icon: "car-shift-pattern"
-            text: "Manual"
-            active: True
+                    orientation: "vertical"
+                    width: root.width*0.2
+                    height: root.height*0.9
+                    min: 0
+                    max: app.CHAIN_LENGTH
+                    value: app.CHAIN_LENGTH-app.current_depth
+                    disabled: True
+                    track_color_disabled: "lightblue"
+                    thumb_color_disabled: "lightblue"
 
-        BaseMDNavigationItem
-            icon: "car-child-seat"
-            text: "Auto"
+                MDSlider:
+                    id: auto_slider_target
 
-        BaseMDNavigationItem
-            icon: "tools"
-            text: "Calibrate"
+                    orientation: "vertical"
+                    width: root.width*0.2
+                    height: root.height*0.9
+                    track_color_active: "blue"
+                    track_color_inactive: "blue"
+                    color:"lightgrey"
+                    hint: True
+                    min: 0
+                    max: app.CHAIN_LENGTH
+                    value: app.CHAIN_LENGTH-app.target_depth
 
-        MDLabel:
-            text: f"{app.debug_msg}"
-            halign: "center"
+                    on_value: app.auto_slider_move(self.value)
+
+            MDBoxLayout:
+                orientation: "vertical"
+                spacing: 10
+
+                MDLabel:
+                    text: f"Current depth: {format(app.current_depth, '.1f')}m"
+                    halign: "center"
+
+                MDLabel:
+                    text: f"Target depth: {format(app.target_depth,'.1f')}m"
+                    halign: "center"
+
+                MDLabel:
+                    text: f"Move by: {format(app.target_depth-app.current_depth,'+.1f')}m"
+                    halign: "center"
+
+                MDIconButton:
+                    text: "Go"
+                    pos_hint: {"center_x": 0.5}
+                    width: root.width*0.2
+                    height: root.height*0.2
+                    on_press: app.auto_go()
+                    icon: "language-go"
+                    text: "Go!"
+                    icon_size: "200sp"
+                    font_size: "40sp"
+                    theme_text_color: "Custom"
+                    text_color: 0, 0.333, 0.494, 1
+                    
+                    
+                MDIconButton:
+                    text: "Stop"
+                    pos_hint: {"center_x": 0.5}
+                    width: root.width*0.2
+                    height: root.height*0.2
+                    on_press: app.auto_stop()
+                    icon: "stop"
+                    text: "Stop!"
+                    icon_size: "200sp"
+                    font_size: "40sp"
+                    theme_text_color: "Custom"
+                    text_color: 0, 0.333, 0.494, 1
+                    
+                MDLabel:
+                    text: f"{app.debug_msg}"
+                    halign: "center" 
+
+    MDBottomNavigationItem:
+        name: 'calib'
+        text: 'Calibrate'
+        icon: 'tools'
+    
+        MDRaisedButton:
+            on_press: app.calib_bottom()
+
+            pos_hint: {"center_x": .5, "center_y": .3}
+            width: root.width*0.5
+            height: root.height*0.2
+            icon: "set-split"
+            text: "Set: Anchor is down (end of chain)!"
+            icon_size: "200sp"
+            font_size: "40sp"
+            theme_text_color: "Custom"
+            text_color: 0, 0.333, 0.494, 1
+                    
+        MDRaisedButton:
+            on_press: app.calib_top()
+
+            pos_hint: {"center_x": .5, "center_y": .8}
+            width: root.width*0.5
+            height: root.height*0.2
+            icon: "set-split"
+            icon_size: "200sp"
+            text: "Set: Anchor is up!"
+            font_size: "40sp"
+            icon_size: "200sp"
+            font_size: "40sp"
+            theme_text_color: "Custom"
+            text_color: 0, 0.333, 0.494, 1

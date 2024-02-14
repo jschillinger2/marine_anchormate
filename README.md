@@ -25,7 +25,7 @@ python3 -m venv path/to/venv
 ```
 pip3 install gpiozero
 pip3 install pigame
-pip3 install https://github.com/kivymd/KivyMD/archive/master.zip
+pip3 install kivymd==1.2.0
 ```
 
 # Run

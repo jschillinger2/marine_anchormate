@@ -15,16 +15,16 @@ from kivy.properties import BooleanProperty
 
 from kivy.lang import Builder
 from kivymd.app import MDApp
-from kivymd.uix.navigationbar import MDNavigationBar, MDNavigationItem
+# from kivymd.uix.navigationbar import MDNavigationBar, MDNavigationItem
 from kivymd.uix.screen import MDScreen
 
 from threading import Thread
 
 
 
-class BaseMDNavigationItem(MDNavigationItem):
-    icon = StringProperty()
-    text = StringProperty()
+#class BaseMDNavigationItem(MDNavigationItem):
+#    icon = StringProperty()
+#    text = StringProperty()
 
 class ConfigScreen(MDScreen):
     image_size = StringProperty()
@@ -125,17 +125,17 @@ class AnchorMate(MDApp):
             self.speak(f"{round(self.current_depth)} meters")
         self.last_current_depth = self.current_depth
         
-    def on_switch_tabs(
-        self,
-        bar: MDNavigationBar,
-        item: MDNavigationItem,
-        item_icon: str,
-        item_text: str,
-    ):
-        self.root.ids.screen_manager.current = item_text
+    #def on_switch_tabs(
+    #    self,
+    #    bar: MDNavigationBar,
+    #    item: MDNavigationItem,
+    #    item_icon: str,
+    #    item_text: str,
+    #):
+       # self.root.ids.screen_manager.current = item_text
 
     def build(self):        
-        # return Builder.load_string(KV)
+        self.theme_cls.primary_palette = "Blue" 
         Builder.load_file('anchormate.kv')
 
     def man_anchor_down_press(self):
