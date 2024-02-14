@@ -1,6 +1,10 @@
 import subprocess
 import pygame
 import time
+import requests
+
+import websocket
+import json
 
 from kivy.clock import Clock
 
@@ -19,12 +23,6 @@ from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 
 from threading import Thread
-
-
-
-#class BaseMDNavigationItem(MDNavigationItem):
-#    icon = StringProperty()
-#    text = StringProperty()
 
 class ConfigScreen(MDScreen):
     image_size = StringProperty()
@@ -101,6 +99,8 @@ class AnchorMate(MDApp):
     io_anchor_up = None if SIMULATED else OutputDevice(PIN_ANCHOR_UP)
     io_anchor_down = None if SIMULATED else OutputDevice(PIN_ANCHOR_DOWN)
 
+    ws = 0
+    
     def __init__(self, **kwargs):
         super(AnchorMate, self).__init__(**kwargs)
         
@@ -108,9 +108,13 @@ class AnchorMate(MDApp):
         self.bind(debug_pinstate_up=self.update_debug_msg)
         self.bind(debug_pinstate_down=self.update_debug_msg)
         self.bind(debug_pinstate_pulse=self.update_debug_msg)
-
+        self.bind(debug_pinstate_up=self.send_value_to_signal_k)
+        self.bind(debug_pinstate_down=self.send_value_to_signal_k)
+        
         # Set listeners to current depth to trigger TTS
         self.bind(current_depth=self.update_depth_tts)
+        self.bind(current_depth=self.send_value_to_signal_k)
+        
 
         # Initialize the debug message
         self.update_debug_msg()
@@ -118,22 +122,28 @@ class AnchorMate(MDApp):
         # set timer to simulate anchor pulse
         if self.SIMULATED:
             Clock.schedule_interval(self.on_pulse_simulated_pressed, 2)   
-        self.speak("Anchor Control is ready")    
+        self.speak("Anchor Control is ready")
+
+        Thread(target=self.run_signalk_websocket).start()
+        
+    def run_signalk_websocket(self):
+        ws_address = 'ws://localhost:3000/signalk/v1/stream'
+        self.ws = websocket.WebSocketApp(ws_address,on_open=self.on_ws_open,
+                            on_message=self.on_ws_message,
+                            on_error=self.on_ws_error,
+                            on_close=self.on_ws_close)
+        #Window.bind(on_request_close=MyApp().on_request_close)
+        self.ws.run_forever()
+
+    def on_websocket_close(self):
+        self.ws = websocket.WebSocketApp(ws_address, on_close=on_websocket_close)
+        
 
     def update_depth_tts(self,a,b):
         if int(self.current_depth) != int(self.last_current_depth):
             self.speak(f"{round(self.current_depth)} meters")
         self.last_current_depth = self.current_depth
         
-    #def on_switch_tabs(
-    #    self,
-    #    bar: MDNavigationBar,
-    #    item: MDNavigationItem,
-    #    item_icon: str,
-    #    item_text: str,
-    #):
-       # self.root.ids.screen_manager.current = item_text
-
     def build(self):        
         self.theme_cls.primary_palette = "Blue" 
         Builder.load_file('anchormate.kv')
@@ -300,5 +310,84 @@ class AnchorMate(MDApp):
         else:
             self.debug_msg = ""
 
+
+    def send_value_to_signal_k(self, *args):
+        path_control = 'vessels/self/anchor/control/'
+        path_current_depth = 'vessels/self/anchor/state/current_depth'
         
+        value = 'OFF'
+        if self.debug_pinstate_up:
+            value = 'UP'
+        if self.debug_pinstate_down:
+            value = 'DOWN'
+       
+        data = {
+            "context": "vessels.self",  
+            "updates": [
+                {
+                    "source": {
+                        "label": "anchormate" 
+                    },
+                    "values": [
+                        {
+                            "path": path_control,
+                            "value": value
+                        },
+                        {
+                            "path": path_current_depth,
+                            "value": self.current_depth
+                        }
+                    ]
+                }
+            ]
+        }
+
+        if hasattr(self.ws, 'open') and self.ws.open:
+            self.ws.send(json.dumps(data))
+            print("Message sent")
+        else:
+            print("WebSocket connection is not open")
+
+    def on_ws_open(self,ws):
+        print("Connection opened")
+        self.ws.open = True  # Set a custom attribute to track the connection state
+
+    def on_ws_message(self,ws, message):
+        print("Received message:", message)
+        data = json.loads(message)
+        
+        # Initialize a variable to hold the rotations value
+        rotations_value = None
+
+        # Extract the rotations value
+        for update in data.get("updates", []):
+            for value in update.get("values", []):
+                if value.get("path") == "vessels/self/anchor/rotations/":
+                    rotations_value = value.get("value")
+                    break  # Stop searching once we find the rotations value
+
+        # Check if we found a rotations value and print it
+        if rotations_value is not None:
+            print(f"Rotations value: {rotations_value}")
+        else:
+            print("Rotations value not found.")
+
+    def on_ws_error(self,ws, error):
+        print("Error:", error)
+
+    def on_ws_close(self,ws,a,b):
+        print("Connection closed")
+        self.ws.open = False  # Update the connection state
+        
+    def on_stop(self):
+        # This method is called when the application is about to stop
+        if self.ws:
+            self.ws.close()  # Close the WebSocket connection
+            print("WebSocket connection closed")
+
+    def on_request_close(self, *args, **kwargs):
+        # This is triggered for example by pressing the 'X' window button
+        self.on_stop()  # Ensure on_stop is called
+        return True            
+            
 AnchorMate().run()
