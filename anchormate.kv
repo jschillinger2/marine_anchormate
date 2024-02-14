@@ -118,19 +118,22 @@ MDBottomNavigation:
 
             MDBoxLayout:
                 orientation: "vertical"
-                spacing: 10
+                spacing: 0
 
                 MDLabel:
                     text: f"Current depth: {format(app.current_depth, '.1f')}m"
                     halign: "center"
+                    height: self.texture_size[1] + 40
 
                 MDLabel:
                     text: f"Target depth: {format(app.target_depth,'.1f')}m"
                     halign: "center"
+                    height: self.texture_size[1] + 40
 
                 MDLabel:
                     text: f"Move by: {format(app.target_depth-app.current_depth,'+.1f')}m"
                     halign: "center"
+                    height: self.texture_size[1] + 40
 
                 MDIconButton:
                     text: "Go"
