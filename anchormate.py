@@ -41,6 +41,45 @@ class Direction(Enum):
 
 class AnchorMate(MDApp):
 
+    
+    def authenticate_signal_k(self, server_url, username, password, version='v1'):
+        """
+        Authenticate with a Signal K server and extract the authentication token.
+
+        :param server_url: Base URL of the Signal K server (e.g., 'http://localhost:3000').
+        :param username: Username for authentication.
+        :param password: Password for authentication.
+        :param version: Version of the Signal K API to use (default is 'v1').
+        :return: The authentication token if successful, None otherwise.
+        """
+
+
+        
+        login_url = f"{server_url}/signalk/{version}/auth/login"
+        print (f"Auth Login URL {login_url}; User: {username}; Password: {password}")
+        payload = {
+            "username": username,
+            "password": password
+        }
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        try:
+            response = requests.post(login_url, json=payload, headers=headers)
+            response.raise_for_status()  # Raises stored HTTPError, if one occurred.
+
+            # Extract token from response
+            token_info = response.json()
+            return token_info.get('token', None)
+        except requests.exceptions.HTTPError as err:
+            print(f"HTTP error occurred: {err}")  # HTTP error
+        except Exception as err:
+            print(f"An error occurred: {err}")  # Other errors
+
+        return None
+
+    
     def read_properties_file(filepath):
         properties = {}
         with open(filepath, 'r') as file:
@@ -56,6 +95,12 @@ class AnchorMate(MDApp):
     
     SIMULATED = config.get('SIMULATED') == 'True'
 
+    SIGNALK_SERVER_URL = config.get('SIGNALK_SERVER_URL')
+    SIGNALK_SERVER_USER = config.get('SIGNALK_SERVER_USER')
+    SIGNALK_SERVER_PASSWORD = config.get('SIGNALK_SERVER_PASSWORD')
+
+    
+    
     IOPINS = config.get('IOPINS') == 'True'
     
     # switch on if you want to see debug info on the screen
@@ -98,6 +143,9 @@ class AnchorMate(MDApp):
     debug_pinstate_down = BooleanProperty(False)
     debug_pinstate_up = BooleanProperty(False)
     debug_pinstate_pulse = BooleanProperty(False)
+
+    # signalk auth token
+    token = ""
     
     # ios
     print(IOPINS)
@@ -119,8 +167,11 @@ class AnchorMate(MDApp):
         # Set listeners to current depth to trigger TTS
         self.bind(current_depth=self.update_depth_tts)
         self.bind(current_depth=self.send_value_to_signal_k)
-        
 
+        # authenticate with signal K
+        self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
+        print(f"Signal K Auth Token: {self.token}")
+        
         # Initialize the debug message
         self.update_debug_msg()
 
@@ -132,7 +183,8 @@ class AnchorMate(MDApp):
         Thread(target=self.run_signalk_websocket).start()
         
     def run_signalk_websocket(self):
-        ws_address = 'ws://localhost:3000/signalk/v1/stream'
+        ws_address = f"ws://{self.SIGNALK_SERVER_URL}/signalk/v1/stream?token={self.token}"
+        print(f"Signal K Websocket URL: {ws_address}")
         self.ws = websocket.WebSocketApp(ws_address,on_open=self.on_ws_open,
                             on_message=self.on_ws_message,
                             on_error=self.on_ws_error,
@@ -317,8 +369,8 @@ class AnchorMate(MDApp):
 
 
     def send_value_to_signal_k(self, *args):
-        path_control = 'vessels/self/anchor/control/'
-        path_current_depth = 'vessels/self/anchor/state/current_depth'
+        path_control = 'vessels.self.anchor.control'
+        path_current_depth = 'vessels.self.anchor.state.current_depth'
         
         value = 'OFF'
         if self.debug_pinstate_up:
@@ -349,7 +401,7 @@ class AnchorMate(MDApp):
 
         if hasattr(self.ws, 'open') and self.ws.open:
             self.ws.send(json.dumps(data))
-            print("Message sent")
+            print(f"Message sent{json.dumps(data)}")
         else:
             print("WebSocket connection is not open")
 
