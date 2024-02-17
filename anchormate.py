@@ -53,10 +53,11 @@ class AnchorMate(MDApp):
 
     PROPERTIES_FILE_PATH = 'anchormate.properties'  # Adjust the path as needed
     config = read_properties_file(PROPERTIES_FILE_PATH)
-
-    # switch to TRUE if you dont want to call the IO ports (for testing)
+    
     SIMULATED = config.get('SIMULATED') == 'True'
 
+    IOPINS = config.get('IOPINS') == 'True'
+    
     # switch on if you want to see debug info on the screen
     DEBUG = config.get('DEBUG') == 'True'
 
@@ -83,6 +84,9 @@ class AnchorMate(MDApp):
     # current depth of anchor
     current_depth = NumericProperty(5)
     last_current_depth = -1
+
+    # last rotation count received from Signal K
+    rotations_value_last=0
     
     # target depth chosen in auto mode
     target_depth = NumericProperty(0)
@@ -96,8 +100,9 @@ class AnchorMate(MDApp):
     debug_pinstate_pulse = BooleanProperty(False)
     
     # ios
-    io_anchor_up = None if SIMULATED else OutputDevice(PIN_ANCHOR_UP)
-    io_anchor_down = None if SIMULATED else OutputDevice(PIN_ANCHOR_DOWN)
+    print(IOPINS)
+    io_anchor_up = None if not IOPINS else OutputDevice(PIN_ANCHOR_UP)
+    io_anchor_down = None if not IOPINS else OutputDevice(PIN_ANCHOR_DOWN)
 
     ws = 0
     
@@ -222,20 +227,20 @@ class AnchorMate(MDApp):
     def io_pin_down_on(self):
         self.io_pin_all_off()
         self.debug_pinstate_down = True
-        if not self.SIMULATED:
+        if self.IOPINS:
             self.io_anchor_down.on()
 
     def io_pin_all_off(self):
         self.debug_pinstate_up = False
         self.debug_pinstate_down = False        
-        if not self.SIMULATED:
+        if self.IOPINS:
             self.io_anchor_down.off()
             self.io_anchor_up.off()
 
     def io_pin_up_on(self):
         self.io_pin_all_off()
         self.debug_pinstate_up = True
-        if not self.SIMULATED:
+        if self.IOPINS:
             self.io_anchor_up.on()
 
     # called by time in simulation mode to simulate pulse from rotation
@@ -266,11 +271,11 @@ class AnchorMate(MDApp):
         
     # Setup the pin as a 'Button', treat rising edges as button presses
     # The 'bounce_time' parameter is optional and can be adjusted based on your needs
-    pulse_detector =  None if SIMULATED else Button(PIN_ROTATION_INDICATOR, pull_up=None, bounce_time=0.05)
+    pulse_detector =  None if not IOPINS else Button(PIN_ROTATION_INDICATOR, pull_up=None, bounce_time=0.05)
 
     # Attach the event handler function to be called on rising edges
-    if not SIMULATED: pulse_detector.when_pressed = on_pulse_on(self)
-    if not SIMULATED: pulse_detector.when_released = on_pulse_off(self)
+    if IOPINS: pulse_detector.when_pressed = on_pulse_on(self)
+    if IOPINS: pulse_detector.when_released = on_pulse_off(self)
     
     def speak_process(self, text):
         try:
@@ -362,13 +367,16 @@ class AnchorMate(MDApp):
         # Extract the rotations value
         for update in data.get("updates", []):
             for value in update.get("values", []):
-                if value.get("path") == "vessels/self/anchor/rotations/":
+                if value.get("path") == "sensors.windlass.rotations":
                     rotations_value = value.get("value")
                     break  # Stop searching once we find the rotations value
 
         # Check if we found a rotations value and print it
         if rotations_value is not None:
             print(f"Rotations value: {rotations_value}")
+            if rotations_value > self.rotations_value_last:
+                self.on_pulse_on()
+            self.rotations_value_last = rotations_value
         else:
             print("Rotations value not found.")
 
