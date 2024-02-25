@@ -5,6 +5,7 @@ import requests
 
 import websocket
 import json
+import threading
 
 from kivy.clock import Clock
 
@@ -175,11 +176,13 @@ class AnchorMate(MDApp):
         # Initialize the debug message
         self.update_debug_msg()
 
+        # setup heartbeat
+        self.send_heartbeat()
+
         # set timer to simulate anchor pulse
         if self.SIMULATED:
             Clock.schedule_interval(self.on_pulse_simulated_pressed, 2)   
         self.speak("Anchor Control is ready")
-
         Thread(target=self.run_signalk_websocket).start()
         
     def run_signalk_websocket(self):
@@ -452,6 +455,51 @@ class AnchorMate(MDApp):
     def on_request_close(self, *args, **kwargs):
         # This is triggered for example by pressing the 'X' window button
         self.on_stop()  # Ensure on_stop is called
-        return True            
+        return True
+
+    def send_heartbeat(self):
+        ws_address = f"ws://{self.SIGNALK_SERVER_URL}/signalk/v1/stream?token={self.token}"
+        def run():
+
+            print("***kos")
+
+            path_control = 'vessels.self.anchor.control.heartbeat'
+            value = time.time()
+            
+            # Establish WebSocket connection
+            ws = websocket.create_connection(ws_address)
+
+            data = {
+                "context": "vessels.self",  
+                "updates": [
+                    {
+                        "source": {
+                            "label": "anchormate" 
+                        },
+                        "values": [
+                            {
+                                "path": path_control,
+                                "value": value
+                            }
+                        ]
+                    }
+                ]
+            }            
+
+            if hasattr(self.ws, 'open') and self.ws.open:
+                self.ws.send(json.dumps(data))
+                print(f"Message sent{json.dumps(data)}")
+            else:
+                print("WebSocket connection is not open")
+            time.sleep(1)
+
+            run();    
+
+        # Run the heartbeat function in a separate thread to avoid blocking
+        thread = threading.Thread(target=run)
+        thread.daemon = True  # Ensures that the thread will be killed when the main program exits
+        thread.start()
+
+
             
 AnchorMate().run()
