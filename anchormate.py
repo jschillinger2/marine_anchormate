@@ -436,11 +436,15 @@ class AnchorMate(MDApp):
         print("Error:", error)
 
     def on_ws_close(self,ws,a,b):
-        print("Connection closed")
+        print("Connection closed. Trying to reconnect. ")
         self.ws.open = False  # Update the connection state
+        self.run_signalk_websocket();
         
     def on_stop(self):
         # This method is called when the application is about to stop
+        self.current_direction = Direction.NONE
+        self.io_pin_all_off() 
+        self.send_value_to_signal_k();
         if self.ws:
             self.ws.close()  # Close the WebSocket connection
             print("WebSocket connection closed")
