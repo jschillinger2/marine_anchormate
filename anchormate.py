@@ -7,6 +7,12 @@ import websocket
 import json
 import threading
 
+import socket
+
+
+import os
+import sys
+
 from kivy.clock import Clock
 
 from enum import Enum
@@ -42,45 +48,7 @@ class Direction(Enum):
 
 class AnchorMate(MDApp):
 
-    
-    def authenticate_signal_k(self, server_url, username, password, version='v1'):
-        """
-        Authenticate with a Signal K server and extract the authentication token.
-
-        :param server_url: Base URL of the Signal K server (e.g., 'http://localhost:3000').
-        :param username: Username for authentication.
-        :param password: Password for authentication.
-        :param version: Version of the Signal K API to use (default is 'v1').
-        :return: The authentication token if successful, None otherwise.
-        """
-
-
         
-        login_url = f"{server_url}/signalk/{version}/auth/login"
-        print (f"Auth Login URL {login_url}; User: {username}; Password: {password}")
-        payload = {
-            "username": username,
-            "password": password
-        }
-        headers = {
-            "Content-Type": "application/json"
-        }
-
-        try:
-            response = requests.post(login_url, json=payload, headers=headers)
-            response.raise_for_status()  # Raises stored HTTPError, if one occurred.
-
-            # Extract token from response
-            token_info = response.json()
-            return token_info.get('token', None)
-        except requests.exceptions.HTTPError as err:
-            print(f"HTTP error occurred: {err}")  # HTTP error
-        except Exception as err:
-            print(f"An error occurred: {err}")  # Other errors
-
-        return None
-
-    
     def read_properties_file(filepath):
         properties = {}
         with open(filepath, 'r') as file:
@@ -90,6 +58,7 @@ class AnchorMate(MDApp):
                     key, value = line.split('=', 1)
                     properties[key.strip()] = value.strip()
         return properties
+
 
     PROPERTIES_FILE_PATH = 'anchormate.properties'  # Adjust the path as needed
     config = read_properties_file(PROPERTIES_FILE_PATH)
@@ -154,8 +123,53 @@ class AnchorMate(MDApp):
     io_anchor_down = None if not IOPINS else OutputDevice(PIN_ANCHOR_DOWN)
 
     ws = 0
+
+    LOCKFILE = "anchormate.lock"
+
+    
+    def authenticate_signal_k(self, server_url, username, password, version='v1'):
+        """
+        Authenticate with a Signal K server and extract the authentication token.
+
+        :param server_url: Base URL of the Signal K server (e.g., 'http://localhost:3000').
+        :param username: Username for authentication.
+        :param password: Password for authentication.
+        :param version: Version of the Signal K API to use (default is 'v1').
+        :return: The authentication token if successful, None otherwise.
+        """
+
+
+        
+        login_url = f"{server_url}/signalk/{version}/auth/login"
+        print (f"Auth Login URL {login_url}; User: {username}; Password: {password}")
+        payload = {
+            "username": username,
+            "password": password
+        }
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        try:
+            response = requests.post(login_url, json=payload, headers=headers)
+            response.raise_for_status()  # Raises stored HTTPError, if one occurred.
+
+            # Extract token from response
+            token_info = response.json()
+            return token_info.get('token', None)
+        except requests.exceptions.HTTPError as err:
+            print(f"HTTP error occurred: {err}")  # HTTP error
+        except Exception as err:
+            print(f"An error occurred: {err}")  # Other errors
+
+        return None
+
+
     
     def __init__(self, **kwargs):
+
+
+        
         super(AnchorMate, self).__init__(**kwargs)
         
         # Set listeners for each BooleanProperty
@@ -177,7 +191,7 @@ class AnchorMate(MDApp):
         self.update_debug_msg()
 
         # setup heartbeat
-        self.send_heartbeat()
+        # self.send_heartbeat()
 
         # set timer to simulate anchor pulse
         if self.SIMULATED:
@@ -196,6 +210,7 @@ class AnchorMate(MDApp):
         self.ws.run_forever()
 
     def on_websocket_close(self):
+        
         self.ws = websocket.WebSocketApp(ws_address, on_close=on_websocket_close)
         
 
@@ -411,6 +426,47 @@ class AnchorMate(MDApp):
     def on_ws_open(self,ws):
         print("Connection opened")
         self.ws.open = True  # Set a custom attribute to track the connection state
+        self.start_heartbeat()
+
+    def start_heartbeat(self):
+        self.send_heartbeat()  # Initial call to start the heartbeat process
+
+    def send_heartbeat(self):
+
+        path_control = 'vessels.self.anchor.control.heartbeat'
+        value = time.time()
+
+        data = {
+            "context": "vessels.self",  
+            "updates": [
+                {
+                    "source": {
+                        "label": "anchormate" 
+                    },
+                    "values": [
+                        {
+                            "path": path_control,
+                            "value": value
+                        }
+                    ]
+                }
+            ]
+        }            
+
+        if hasattr(self.ws, 'open') and self.ws.open:
+            self.ws.send(json.dumps(data))
+            print(f"Message sent{json.dumps(data)}")
+        else:
+            print("WebSocket connection is not open")
+            self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
+            self.run_signalk_websocket();
+
+            self.run_signalk_websocket();
+                
+   
+        # Schedule the next heartbeat
+        self.heartbeat_timer = threading.Timer(2, self.send_heartbeat)  # Send heartbeat every 2 seconds
+        self.heartbeat_timer.start()    
 
     def on_ws_message(self,ws, message):
         print("Received message:", message)
@@ -441,6 +497,7 @@ class AnchorMate(MDApp):
     def on_ws_close(self,ws,a,b):
         print("Connection closed. Trying to reconnect. ")
         self.ws.open = False  # Update the connection state
+        self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
         self.run_signalk_websocket();
         
     def on_stop(self):
@@ -457,48 +514,7 @@ class AnchorMate(MDApp):
         self.on_stop()  # Ensure on_stop is called
         return True
 
-    def send_heartbeat(self):
-        ws_address = f"ws://{self.SIGNALK_SERVER_URL}/signalk/v1/stream?token={self.token}"
-        def run():
-
-            print("***kos")
-
-            path_control = 'vessels.self.anchor.control.heartbeat'
-            value = time.time()
-            
-            # Establish WebSocket connection
-            ws = websocket.create_connection(ws_address)
-
-            data = {
-                "context": "vessels.self",  
-                "updates": [
-                    {
-                        "source": {
-                            "label": "anchormate" 
-                        },
-                        "values": [
-                            {
-                                "path": path_control,
-                                "value": value
-                            }
-                        ]
-                    }
-                ]
-            }            
-
-            if hasattr(self.ws, 'open') and self.ws.open:
-                self.ws.send(json.dumps(data))
-                print(f"Message sent{json.dumps(data)}")
-            else:
-                print("WebSocket connection is not open")
-            time.sleep(1)
-
-            run();    
-
-        # Run the heartbeat function in a separate thread to avoid blocking
-        thread = threading.Thread(target=run)
-        thread.daemon = True  # Ensures that the thread will be killed when the main program exits
-        thread.start()
+   
 
 
             
