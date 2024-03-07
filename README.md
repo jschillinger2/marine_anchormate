@@ -1,7 +1,7 @@
 
 # Marine Anchormate Controller
 
-This project is an experimental solution designed to interface with Signal K servers for controlling anchor windlass systems through a FireBeetle controller, enhanced with a Python-based application for extended functionalities.
+This project is an experimental solution designed to interface with Signal K servers for controlling anchor windlass systems through a FireBeetle controller, enhanced with a Python-based application for extended functionalities. The hardware code is <a href="https://github.com/jschillinger2/marine_anchormate_esp">here</a>
 
 ## Features
 
