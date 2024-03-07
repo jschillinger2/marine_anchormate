@@ -2,33 +2,23 @@ import subprocess
 import pygame
 import time
 import requests
-
 import websocket
 import json
 import threading
-
 import socket
-
-
 import os
 import sys
-
 from kivy.clock import Clock
-
 from enum import Enum
 from gpiozero import Button
 from gpiozero import OutputDevice
 from time import sleep
-
 from kivy.properties import NumericProperty
 from kivy.properties import StringProperty
 from kivy.properties import BooleanProperty
-
 from kivy.lang import Builder
 from kivymd.app import MDApp
-# from kivymd.uix.navigationbar import MDNavigationBar, MDNavigationItem
 from kivymd.uix.screen import MDScreen
-
 from threading import Thread
 
 class ConfigScreen(MDScreen):
@@ -40,14 +30,12 @@ class ManualScreen(MDScreen):
 class AutoScreen(MDScreen):
     image_size = StringProperty()
 
-
 class Direction(Enum):
     UP = 1
     DOWN = 2
     NONE = 3
 
 class AnchorMate(MDApp):
-
         
     def read_properties_file(filepath):
         properties = {}
@@ -68,8 +56,6 @@ class AnchorMate(MDApp):
     SIGNALK_SERVER_URL = config.get('SIGNALK_SERVER_URL')
     SIGNALK_SERVER_USER = config.get('SIGNALK_SERVER_USER')
     SIGNALK_SERVER_PASSWORD = config.get('SIGNALK_SERVER_PASSWORD')
-
-    
     
     IOPINS = config.get('IOPINS') == 'True'
     
@@ -124,9 +110,6 @@ class AnchorMate(MDApp):
 
     ws = 0
 
-    LOCKFILE = "anchormate.lock"
-
-    
     def authenticate_signal_k(self, server_url, username, password, version='v1'):
         """
         Authenticate with a Signal K server and extract the authentication token.
@@ -138,8 +121,6 @@ class AnchorMate(MDApp):
         :return: The authentication token if successful, None otherwise.
         """
 
-
-        
         login_url = f"{server_url}/signalk/{version}/auth/login"
         print (f"Auth Login URL {login_url}; User: {username}; Password: {password}")
         payload = {
@@ -163,13 +144,9 @@ class AnchorMate(MDApp):
             print(f"An error occurred: {err}")  # Other errors
 
         return None
-
-
     
     def __init__(self, **kwargs):
 
-
-        
         super(AnchorMate, self).__init__(**kwargs)
         
         # Set listeners for each BooleanProperty
@@ -213,7 +190,6 @@ class AnchorMate(MDApp):
         
         self.ws = websocket.WebSocketApp(ws_address, on_close=on_websocket_close)
         
-
     def update_depth_tts(self,a,b):
         if int(self.current_depth) != int(self.last_current_depth):
             self.speak(f"{round(self.current_depth)} meters")
@@ -319,7 +295,6 @@ class AnchorMate(MDApp):
        Clock.schedule_once(self.on_pulse_simulated_release, 0.5)
        
     def on_pulse_simulated_release(self, a):
-       # time.sleep(1) 
        self.on_pulse_off()
      
     # Define a function to be called whenever the pin goes from LOW to HIGH
@@ -384,7 +359,6 @@ class AnchorMate(MDApp):
             self.debug_msg = f"U:{self.debug_pinstate_up}, D:{self.debug_pinstate_down}, P:{self.debug_pinstate_pulse}"
         else:
             self.debug_msg = ""
-
 
     def send_value_to_signal_k(self, *args):
         path_control = 'vessels.self.anchor.control'
@@ -465,11 +439,11 @@ class AnchorMate(MDApp):
                 
    
         # Schedule the next heartbeat
-        self.heartbeat_timer = threading.Timer(2, self.send_heartbeat)  # Send heartbeat every 2 seconds
+        self.heartbeat_timer = threading.Timer(0.25, self.send_heartbeat)  # Send heartbeat
         self.heartbeat_timer.start()    
 
     def on_ws_message(self,ws, message):
-        print("Received message:", message)
+        # print("Received message:", message)
         data = json.loads(message)
         
         # Initialize a variable to hold the rotations value
@@ -488,8 +462,8 @@ class AnchorMate(MDApp):
             if rotations_value > self.rotations_value_last:
                 self.on_pulse_on()
             self.rotations_value_last = rotations_value
-        else:
-            print("Rotations value not found.")
+        # else:
+            # print("Rotations value not found.")
 
     def on_ws_error(self,ws, error):
         print("Error:", error)
@@ -513,9 +487,5 @@ class AnchorMate(MDApp):
         # This is triggered for example by pressing the 'X' window button
         self.on_stop()  # Ensure on_stop is called
         return True
-
-   
-
-
             
 AnchorMate().run()
