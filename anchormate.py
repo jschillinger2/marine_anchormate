@@ -429,7 +429,7 @@ class AnchorMate(MDApp):
 
         if hasattr(self.ws, 'open') and self.ws.open:
             self.ws.send(json.dumps(data))
-            print(f"Message sent{json.dumps(data)}")
+            # print(f"Message sent{json.dumps(data)}")
         else:
             print("WebSocket connection is not open")
             self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
