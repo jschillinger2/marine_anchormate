@@ -147,7 +147,8 @@ MDBottomNavigation:
                     font_size: "40sp"
                     theme_text_color: "Custom"
                     text_color: 0, 0.333, 0.494, 1
-                    
+                    disabled: app.auto_in_progress
+
                     
                 MDIconButton:
                     text: "Stop"
@@ -161,6 +162,7 @@ MDBottomNavigation:
                     font_size: "40sp"
                     theme_text_color: "Custom"
                     text_color: 0, 0.333, 0.494, 1
+                    disabled: not app.auto_in_progress
                     
                 MDLabel:
                     text: f"{app.debug_msg}"
