@@ -226,7 +226,7 @@ class AnchorMate(MDApp):
         self.auto_cancel=False
         distancetomove = self.target_depth - self.current_depth
         print(f"Auto Adjust Start. Moving {distancetomove} meters")
-        self.speak_process("Adjusting anchor height. Press Stop to cancel.")
+        self.speak("Adjusting anchor height. Press Stop to cancel.")
         Thread(target=self.auto_go_process, args=(distancetomove,)).start()
 
     def auto_go_process(self, delta):
