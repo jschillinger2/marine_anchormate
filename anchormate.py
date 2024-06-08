@@ -230,7 +230,7 @@ class AnchorMate(MDApp):
         Thread(target=self.auto_go_process, args=(distancetomove,)).start()
 
     def auto_go_process(self, delta):
-        if delta > 1:
+        if delta > 0:
             self.man_anchor_down_press()
             while (self.current_depth<self.target_depth) and not self.auto_cancel:
                 time.sleep(0.1)
