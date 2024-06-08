@@ -94,6 +94,7 @@ class AnchorMate(MDApp):
 
     # set in automode if the cancel button is pushed
     auto_cancel=False
+    auto_in_progress = BooleanProperty(False)
 
     debug_msg = StringProperty("debug text")
     debug_pinstate_down = BooleanProperty(False)
@@ -230,6 +231,7 @@ class AnchorMate(MDApp):
         Thread(target=self.auto_go_process, args=(distancetomove,)).start()
 
     def auto_go_process(self, delta):
+        self.auto_in_progress = True
         if delta > 0:
             self.man_anchor_down_press()
             while (self.current_depth<self.target_depth) and not self.auto_cancel:
@@ -240,7 +242,7 @@ class AnchorMate(MDApp):
             else:
                 self.speak("Anchor adjustment cancelled")
         else:
-            print("xx")
+            # print("xx")
             self.man_anchor_up_press()
             while self.current_depth>self.target_depth and self.current_depth>self.MIN_DEPTH and not self.auto_cancel:
                 print( self.current_depth)
@@ -253,7 +255,8 @@ class AnchorMate(MDApp):
                 else:    
                     self.speak("Anchor is at target depth")
             else:
-                self.speak("Anchor adjustment cancelled")            
+                self.speak("Anchor adjustment cancelled")
+        self.auto_in_progress = False
         
     def auto_stop(self):
         print("Auto Adjust Stop")
