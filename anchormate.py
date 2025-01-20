@@ -8,6 +8,7 @@ import threading
 import socket
 import os
 import sys
+from threading import Event
 from kivy.clock import Clock
 from enum import Enum
 from gpiozero import Button
@@ -20,6 +21,7 @@ from kivy.lang import Builder
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from threading import Thread
+from kivy.core.window import Window
 
 class ConfigScreen(MDScreen):
     image_size = StringProperty()
@@ -137,6 +139,8 @@ class AnchorMate(MDApp):
     def __init__(self, **kwargs):
 
         super(AnchorMate, self).__init__(**kwargs)
+        self.stop_event = Event() 
+        Window.bind(on_request_close=self.on_request_close)
         
         # Set listeners for each BooleanProperty
         self.bind(debug_pinstate_up=self.update_debug_msg)
@@ -166,14 +170,14 @@ class AnchorMate(MDApp):
         Thread(target=self.run_signalk_websocket).start()
         
     def run_signalk_websocket(self):
-        ws_address = f"ws://{self.SIGNALK_SERVER_URL}/signalk/v1/stream?token={self.token}"
-        print(f"Signal K Websocket URL: {ws_address}")
-        self.ws = websocket.WebSocketApp(ws_address,on_open=self.on_ws_open,
+        if not self.stop_event.is_set():
+            ws_address = f"ws://{self.SIGNALK_SERVER_URL}/signalk/v1/stream?token={self.token}"
+            print(f"Signal K Websocket URL: {ws_address}")
+            self.ws = websocket.WebSocketApp(ws_address,on_open=self.on_ws_open,
                             on_message=self.on_ws_message,
                             on_error=self.on_ws_error,
                             on_close=self.on_ws_close)
-        #Window.bind(on_request_close=MyApp().on_request_close)
-        self.ws.run_forever()
+            self.ws.run_forever()
 
     def on_websocket_close(self):        
         self.ws = websocket.WebSocketApp(ws_address, on_close=on_websocket_close)
@@ -407,12 +411,14 @@ class AnchorMate(MDApp):
             # print(f"Message sent{json.dumps(data)}")
         else:
             print("WebSocket connection is not open")
-            self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
-            self.run_signalk_websocket();
+            if not self.stop_event.is_set():
+                self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
+                self.run_signalk_websocket();
                    
         # Schedule the next heartbeat
-        self.heartbeat_timer = threading.Timer(0.25, self.send_heartbeat)  # Send heartbeat
-        self.heartbeat_timer.start()    
+        if not self.stop_event.is_set():
+            self.heartbeat_timer = threading.Timer(0.25, self.send_heartbeat)  # Send heartbeat
+            self.heartbeat_timer.start()    
 
     def on_ws_message(self,ws, message):
         # print("Received message:", message)
@@ -443,8 +449,9 @@ class AnchorMate(MDApp):
     def on_ws_close(self,ws,a,b):
         print("Connection closed. Trying to reconnect. ")
         self.ws.open = False  # Update the connection state
-        self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
-        self.run_signalk_websocket();
+        if not self.stop_event.is_set():
+            self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
+            self.run_signalk_websocket();
         
     def on_stop(self):
         # This method is called when the application is about to stop
@@ -454,10 +461,12 @@ class AnchorMate(MDApp):
         if self.ws:
             self.ws.close()  # Close the WebSocket connection
             print("WebSocket connection closed")
-
+            
     def on_request_close(self, *args, **kwargs):
         # This is triggered for example by pressing the 'X' window button
+        print("Window Close Request")
+        self.stop_event.set()
         self.on_stop()  # Ensure on_stop is called
-        return True
+        return False
             
 AnchorMate().run()
