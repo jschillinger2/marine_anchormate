@@ -83,7 +83,7 @@ class AnchorMate(MDApp):
     current_direction = Direction.NONE
     
     # current depth of anchor
-    current_depth = NumericProperty(5)
+    current_depth = NumericProperty(0)
     last_current_depth = -1
 
     # last rotation count received from Signal K
