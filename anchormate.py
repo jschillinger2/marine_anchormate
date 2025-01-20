@@ -57,8 +57,6 @@ class AnchorMate(MDApp):
     SIGNALK_SERVER_USER = config.get('SIGNALK_SERVER_USER')
     SIGNALK_SERVER_PASSWORD = config.get('SIGNALK_SERVER_PASSWORD')
     
-    IOPINS = config.get('IOPINS') == 'True'
-    
     # switch on if you want to see debug info on the screen
     DEBUG = config.get('DEBUG') == 'True'
 
@@ -74,11 +72,6 @@ class AnchorMate(MDApp):
     # minimum length to pull the anchor up, allow user to do the rest manual
     MIN_DEPTH = float(config.get('MIN_DEPTH', 0))
     
-    # PINS
-    PIN_ANCHOR_UP = int(config.get('PIN_ANCHOR_UP', 0))
-    PIN_ANCHOR_DOWN = int(config.get('PIN_ANCHOR_DOWN', 0))
-    PIN_ROTATION_INDICATOR = int(config.get('PIN_ROTATION_INDICATOR', 0))
-
     # the direction of the anchor movement
     current_direction = Direction.NONE
     
@@ -104,11 +97,6 @@ class AnchorMate(MDApp):
     # signalk auth token
     token = ""
     
-    # ios
-    print(IOPINS)
-    io_anchor_up = None if not IOPINS else OutputDevice(PIN_ANCHOR_UP)
-    io_anchor_down = None if not IOPINS else OutputDevice(PIN_ANCHOR_DOWN)
-
     ws = 0
 
     def authenticate_signal_k(self, server_url, username, password, version='v1'):
@@ -276,21 +264,14 @@ class AnchorMate(MDApp):
     def io_pin_down_on(self):
         self.io_pin_all_off()
         self.debug_pinstate_down = True
-        if self.IOPINS:
-            self.io_anchor_down.on()
 
     def io_pin_all_off(self):
         self.debug_pinstate_up = False
         self.debug_pinstate_down = False        
-        if self.IOPINS:
-            self.io_anchor_down.off()
-            self.io_anchor_up.off()
 
     def io_pin_up_on(self):
         self.io_pin_all_off()
         self.debug_pinstate_up = True
-        if self.IOPINS:
-            self.io_anchor_up.on()
 
     # called by time in simulation mode to simulate pulse from rotation
     def on_pulse_simulated_pressed(self, a):
@@ -316,14 +297,6 @@ class AnchorMate(MDApp):
     def on_pulse_off(self):
         print(f"Pulse release detected!")
         self.debug_pinstate_pulse = False
-        
-    # Setup the pin as a 'Button', treat rising edges as button presses
-    # The 'bounce_time' parameter is optional and can be adjusted based on your needs
-    pulse_detector =  None if not IOPINS else Button(PIN_ROTATION_INDICATOR, pull_up=None, bounce_time=0.05)
-
-    # Attach the event handler function to be called on rising edges
-    if IOPINS: pulse_detector.when_pressed = on_pulse_on(self)
-    if IOPINS: pulse_detector.when_released = on_pulse_off(self)
     
     def speak_process(self, text):
         try:
