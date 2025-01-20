@@ -23,7 +23,6 @@ Refer to [Marine Anchormate ESP](https://github.com/jschillinger2/marine_anchorm
 
 - Python 3.x
 - Kivy for the GUI
-- GPIO Zero for GPIO control
 - Requests and Websocket libraries for communication with Signal K
 
 ### Setup
@@ -54,18 +53,6 @@ Refer to [Marine Anchormate ESP](https://github.com/jschillinger2/marine_anchorm
 ### `MIN_DEPTH`
 - **Description**: Sets the minimum length to pull the anchor up, allowing the user to do the rest manually. This feature ensures that the system does not need to fully retract the anchor, saving time and effort in shallow waters.
 - **Default Value**: `2`
-
-### `PIN_ANCHOR_UP`
-- **Description**: GPIO pin number used to trigger the anchor's upward movement. This pin interfaces with the hardware responsible for retracting the anchor.
-- **Default Value**: `17`
-
-### `PIN_ANCHOR_DOWN`
-- **Description**: GPIO pin number used to initiate the anchor's downward deployment. It signals the hardware mechanism to release the anchor for setting.
-- **Default Value**: `18`
-
-### `PIN_ROTATION_INDICATOR`
-- **Description**: GPIO pin number connected to the device that indicates the rotation of the anchor mechanism. This pin is used to monitor the movement and calculate the chain's deployed length.
-- **Default Value**: `19`
 
 These settings allow for a high degree of customization and should be adjusted according to the specifics of your hardware setup and operational preferences.
 
