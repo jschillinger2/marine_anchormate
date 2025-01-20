@@ -175,8 +175,7 @@ class AnchorMate(MDApp):
         #Window.bind(on_request_close=MyApp().on_request_close)
         self.ws.run_forever()
 
-    def on_websocket_close(self):
-        
+    def on_websocket_close(self):        
         self.ws = websocket.WebSocketApp(ws_address, on_close=on_websocket_close)
         
     def update_depth_tts(self,a,b):
@@ -410,10 +409,7 @@ class AnchorMate(MDApp):
             print("WebSocket connection is not open")
             self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
             self.run_signalk_websocket();
-
-            self.run_signalk_websocket();
-                
-   
+                   
         # Schedule the next heartbeat
         self.heartbeat_timer = threading.Timer(0.25, self.send_heartbeat)  # Send heartbeat
         self.heartbeat_timer.start()    
