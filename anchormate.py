@@ -41,6 +41,18 @@ class Direction(Enum):
 
 class AnchorMate:
 
+    # Function to get local IP address for UI access
+
+    def get_local_ip(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except:
+            return "localhost"
+
     def read_properties_file(filepath):
         properties = {}
         with open(filepath, 'r') as file:
@@ -143,7 +155,10 @@ class AnchorMate:
         if self.SIMULATED:
             print("Starting simulated rotation pulses")
             self.schedule_simulated_pulses()
-        
+
+        # show local ip
+        print(f"IP for QR code: {self.get_local_ip()}");
+            
         # authenticate with signal K
         self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
         print(f"Signal K Auth Token: {self.token}")
@@ -445,6 +460,12 @@ def heartbeat():
 def get_status():
     return jsonify({"autoRunning": anchor.auto_in_progress})
 
+@app.route("/api/info", methods=["GET"])
+def get_info():
+    return jsonify({
+        "host": anchor.get_local_ip(),
+        "chainLength": anchor.CHAIN_LENGTH
+    })
 
 # Serve React frontend
 @app.route("/", defaults={"path": ""})

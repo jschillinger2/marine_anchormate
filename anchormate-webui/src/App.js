@@ -35,7 +35,24 @@ export default function WindlassControlUI() {
   const [targetDepth, setTargetDepth] = useState(10);
   const [armed, setArmed] = useState(false);
   const [autoRunning, setAutoRunning] = useState(false);
-  const controlUrl = window.location.href;
+  //  const controlUrl = window.location.href;
+  const [controlUrl, setControlUrl] = useState(window.location.href);
+  const [maxChainLength, setMaxChainLength] = useState(20); // fallback default
+
+  useEffect(() => {
+  const fetchInfo = async () => {
+    try {
+      const res = await fetch("/api/info");
+      const data = await res.json();
+      setControlUrl(`http://${data.host}:5000`);
+      setMaxChainLength(data.chainLength);
+    } catch (e) {
+      console.error("Failed to fetch host info", e);
+    }
+  };
+  fetchInfo();
+}, []);
+
 
   useEffect(() => {
     const fetchDepth = async () => {
@@ -164,7 +181,7 @@ export default function WindlassControlUI() {
             <Slider
               value={targetDepth}
               min={0}
-              max={20}
+              max={maxChainLength}
               step={1}
               onChange={(e, val) => setTargetDepth(val)}
               sx={{ width: "80%" }}
@@ -185,8 +202,8 @@ export default function WindlassControlUI() {
 
         <TabPanel value={tabIndex} index={2}>
           <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
-            <Button variant="contained" onClick={() => calibrateDepth(0)} disabled={!armed}>Calibrate Up (0m)</Button>
-            <Button variant="contained" onClick={() => calibrateDepth(20)} disabled={!armed}>Calibrate Down (20m)</Button>
+            <Button variant="contained" onClick={() => calibrateDepth(0)} disabled={!armed}>Anchor is up</Button>
+            <Button variant="contained" onClick={() => calibrateDepth(maxChainLength)} disabled={!armed}>Anchor is at chain end</Button>
           </Box>
         </TabPanel>
 
