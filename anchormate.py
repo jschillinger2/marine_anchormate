@@ -1,5 +1,5 @@
 import subprocess
-import pygame
+# import pygame
 import time
 import requests
 import websocket
@@ -139,6 +139,13 @@ class AnchorMate(MDApp):
     def __init__(self, **kwargs):
 
         super(AnchorMate, self).__init__(**kwargs)
+
+        # Initialize pygame mixer
+        #pygame.mixer.init()
+
+        # Load the MP3 music file
+        #pygame.mixer.music.load(self.SOUND_DING_PATH)
+        
         self.stop_event = Event() 
         Window.bind(on_request_close=self.on_request_close)
         
@@ -302,31 +309,31 @@ class AnchorMate(MDApp):
         self.debug_pinstate_pulse = False
     
     def speak_process(self, text):
-        try:
-            # The command to execute Festival and send text to it
-            command = f'echo "{text}" | festival --tts'
-            # Execute the command
-            subprocess.run(command, shell=True, check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"An error occurred: {e}")
-
+        #try:
+        #    # The command to execute Festival and send text to it
+        #    command = f'echo "{text}" | festival --tts'
+        #    # Execute the command
+        #    subprocess.run(command, shell=True, check=True)
+        #except subprocess.CalledProcessError as e:
+        #    print(f"An error occurred: {e}")
+        print("xx")
+            
     def speak(self, text):
-        Thread(target=self.speak_process, args=(text,)).start()
-
+        # Thread(target=self.speak_process, args=(text,)).start()
+        print("xx")
+        
     def play_mp3(self, path_to_mp3):
-        # Initialize pygame mixer
-        pygame.mixer.init()
-
-        # Load the MP3 music file
-        pygame.mixer.music.load(path_to_mp3)
 
         # Play the music
-        pygame.mixer.music.play()
+        #pygame.mixer.music.play()
 
         # Wait for the music to play. Without this, the script may end and stop the music.
-        while pygame.mixer.music.get_busy():
-            time.sleep(1)
+        #while pygame.mixer.music.get_busy():
+        #    time.sleep(1)
+        print("xx")
 
+        #print('\a')
+        
     # plays a ding sound
     def play_ding(self):
         Thread(target=self.play_mp3, args=(self.SOUND_DING_PATH,)).start()
