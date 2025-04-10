@@ -48,14 +48,14 @@ export default function WindlassControlUI() {
       }
     };
     fetchDepth();
-    const interval = setInterval(fetchDepth, 2000);
+    const interval = setInterval(fetchDepth, 500);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     const heartbeat = setInterval(() => {
       fetch("/api/heartbeat", { method: "POST" });
-    }, 1000);
+    }, 250);
     return () => clearInterval(heartbeat);
   }, []);
 

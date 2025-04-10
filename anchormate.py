@@ -133,6 +133,8 @@ class AnchorMate:
             print(f"An error occurred: {err}")  # Other errors
 
         return None
+
+    last_ui_heartbeat_time = time.time()
     
     def __init__(self, **kwargs):
 
@@ -150,6 +152,15 @@ class AnchorMate:
         self.update_debug_msg()
 
         Thread(target=self.run_signalk_websocket).start()
+        Thread(target=self.monitor_ui_heartbeat_timeout, daemon=True).start()
+
+    def monitor_ui_heartbeat_timeout(self):
+        while True:
+            time.sleep(0.5)
+            if self.auto_in_progress:
+                if time.time() - self.last_ui_heartbeat_time > 1.0:
+                    print("No UI heartbeat received in >1s, stopping auto.")
+                    self.auto_stop()
         
     def run_signalk_websocket(self):
         ws_address = f"ws://{self.SIGNALK_SERVER_URL}/signalk/v1/stream?token={self.token}"
@@ -427,6 +438,7 @@ def get_depth():
 
 @app.route("/api/heartbeat", methods=["POST"])
 def heartbeat():
+    anchor.last_ui_heartbeat_time = time.time()
     return jsonify({"status": "alive"})
 
 @app.route("/api/status", methods=["GET"])
