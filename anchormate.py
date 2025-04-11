@@ -41,18 +41,6 @@ class Direction(Enum):
 
 class AnchorMate:
 
-    # Function to get local IP address for UI access
-
-    def get_local_ip(self):
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-            return ip
-        except:
-            return "localhost"
-
     def read_properties_file(filepath):
         properties = {}
         with open(filepath, 'r') as file:
@@ -78,6 +66,9 @@ class AnchorMate:
     
     # chain length in meter
     CHAIN_LENGTH=float(config.get('CHAIN_LENGTH', 0))
+    
+    # hostname for QR code (mobile access)
+    HOSTNAME = config.get('HOSTNAME')
 
     # how many meters does the chain move for 1 rotation
     LENGTH_PER_ROTATION = float(config.get('LENGTH_PER_ROTATION', 0))
@@ -155,10 +146,7 @@ class AnchorMate:
         if self.SIMULATED:
             print("Starting simulated rotation pulses")
             self.schedule_simulated_pulses()
-
-        # show local ip
-        print(f"IP for QR code: {self.get_local_ip()}");
-            
+         
         # authenticate with signal K
         self.token = self.authenticate_signal_k(f"http://{self.SIGNALK_SERVER_URL}", self.SIGNALK_SERVER_USER, self.SIGNALK_SERVER_PASSWORD);
         print(f"Signal K Auth Token: {self.token}")
@@ -463,7 +451,7 @@ def get_status():
 @app.route("/api/info", methods=["GET"])
 def get_info():
     return jsonify({
-        "host": anchor.get_local_ip(),
+        "host": anchor.HOSTNAME,
         "chainLength": anchor.CHAIN_LENGTH
     })
 

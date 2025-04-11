@@ -80,6 +80,9 @@ Once the backend is running, open a browser at `http://<your-device-ip>:5000` to
 - **Description**: Sets the minimum length to pull the anchor up, allowing the user to do the rest manually. This feature ensures that the system does not need to fully retract the anchor, saving time and effort in shallow waters.
 - **Default Value**: `2`
 
+### `HOSTNAME`
+- **Description**: Sets the hostname to be used for the QRCode for access wil monbile browser. 
+
 These settings allow for a high degree of customization and should be adjusted according to the specifics of your hardware setup and operational preferences.
 
 ## Contributing
