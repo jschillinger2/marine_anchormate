@@ -16,6 +16,8 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
 import { QRCodeSVG } from "qrcode.react";
+import { useRef } from "react";
+
 
 const darkTheme = createTheme({ palette: { mode: "dark" } });
 // const [autoRunning, setAutoRunning] = useState(false);
@@ -144,6 +146,22 @@ export default function WindlassControlUI() {
     setArmed(!armed);
   };
 
+  const touchTimeoutRef = useRef(null);
+  
+
+  const handleLongPressStart = (label, actionFn) => {
+    if (label === "STOP" || armed) {
+      actionFn();
+      touchTimeoutRef.current = setTimeout(() => actionFn(), 100);
+    }
+  };
+
+  const handleLongPressEnd = (fallback) => {
+    clearTimeout(touchTimeoutRef.current);
+    if (fallback) fallback();
+  };
+   
+
   return (
     <ThemeProvider theme={darkTheme}>
       <Box sx={{ width: "100vw", height: "100vh", bgcolor: "black", color: "text.primary", overflow: "auto" }}>
@@ -166,12 +184,37 @@ export default function WindlassControlUI() {
 
         <TabPanel value={tabIndex} index={0}>
           <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
-            <IconButton color="primary" onMouseDown={() => armed && sendManualMove("UP")} onMouseUp={() => sendManualMove("STOP")} disabled={!armed}>
-              <ArrowUpwardIcon fontSize="large" />
+            
+
+	  <IconButton
+              color="primary" sx={{ width: 120, height: 120 }}
+              onMouseDown={() => handleLongPressStart("UP", () => sendManualMove("UP"))}
+      onTouchStart={(e) => {
+    e.preventDefault();          
+    handleLongPressStart("UP", () => sendManualMove("UP"));
+  }}
+  onContextMenu={(e) => e.preventDefault()} 
+              onMouseUp={() => handleLongPressEnd(() => sendManualMove("STOP"))}
+              onTouchEnd={() => handleLongPressEnd(() => sendManualMove("STOP"))}
+              disabled={!armed}
+            >
+              <ArrowUpwardIcon sx={{ fontSize: 60 }} />
             </IconButton>
             <Typography variant="h6">Current Depth: {depth} m</Typography>
-            <IconButton color="primary" onMouseDown={() => armed && sendManualMove("DOWN")} onMouseUp={() => sendManualMove("STOP")} disabled={!armed}>
-              <ArrowDownwardIcon fontSize="large" />
+            <IconButton
+              color="primary" sx={{ width: 120, height: 120 }}
+      onMouseDown={() => handleLongPressStart("DOWN", () => sendManualMove("DOWN"))}
+      onTouchStart={(e) => {
+    e.preventDefault();          
+    handleLongPressStart("UP", () => sendManualMove("DOWN"));
+  }}
+  onContextMenu={(e) => e.preventDefault()}
+              onTouchStart={() => handleLongPressStart("DOWN", () => sendManualMove("DOWN"))}
+              onMouseUp={() => handleLongPressEnd(() => sendManualMove("STOP"))}
+              onTouchEnd={() => handleLongPressEnd(() => sendManualMove("STOP"))}
+              disabled={!armed}
+            >
+              <ArrowDownwardIcon sx={{ fontSize: 60 }} />
             </IconButton>
           </Box>
         </TabPanel>
@@ -189,12 +232,27 @@ export default function WindlassControlUI() {
             />
             <Typography>Target Depth: {targetDepth} m</Typography>
             <Typography variant="h6">Current Depth: {depth} m</Typography>
-            <Box display="flex" gap={2}>
-              <IconButton color="success" onClick={startAutoMove} disabled={!armed || autoRunning}>
-                <PlayArrowIcon fontSize="large" />
+
+      <Box display="flex" gap={3}>
+              <IconButton
+                color="success" sx={{ width: 120, height: 120 }}
+                onMouseDown={() => handleLongPressStart("START", startAutoMove)}
+                onTouchStart={() => handleLongPressStart("START", startAutoMove)}
+                onMouseUp={() => handleLongPressEnd()}
+                onTouchEnd={() => handleLongPressEnd()}
+                disabled={!armed || autoRunning}
+              >
+                <PlayArrowIcon sx={{ fontSize: 60 }} />
               </IconButton>
-              <IconButton color="error" onClick={stopAutoMove} disabled={!autoRunning}>
-                <StopIcon fontSize="large" />
+              <IconButton
+                color="error" sx={{ width: 120, height: 120 }}
+                onMouseDown={() => handleLongPressStart("STOP", stopAutoMove)}
+                onTouchStart={() => handleLongPressStart("STOP", stopAutoMove)}
+                onMouseUp={() => handleLongPressEnd()}
+                onTouchEnd={() => handleLongPressEnd()}
+                disabled={!autoRunning}
+              >
+                <StopIcon sx={{ fontSize: 60 }} />
               </IconButton>
             </Box>
           </Box>
