@@ -39,7 +39,7 @@ Refer to the [Marine Anchormate ESP](https://github.com/jschillinger2/marine_anc
    ```
    The backend runs on port `5000` by default.
 
-### React UI (Web Interface)
+### React UI (Web Interface, only if you need to rebuild it)
 
 1. Navigate to the web UI subfolder:
    ```bash
