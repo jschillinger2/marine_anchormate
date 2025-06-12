@@ -37,6 +37,7 @@ export default function WindlassControlUI() {
   const [targetDepth, setTargetDepth] = useState(10);
   const [armed, setArmed] = useState(false);
   const [autoRunning, setAutoRunning] = useState(false);
+  const [controllerConnected, setControllerConnected] = useState(false);
   //  const controlUrl = window.location.href;
   const [controlUrl, setControlUrl] = useState(window.location.href);
   const [maxChainLength, setMaxChainLength] = useState(20); // fallback default
@@ -96,6 +97,7 @@ export default function WindlassControlUI() {
       const res = await fetch("/api/status");
       const data = await res.json();
       setAutoRunning(data.autoRunning);
+      setControllerConnected(data.controllerConnected);
     } catch (e) {
       console.error("Failed to get status", e);
     }
@@ -103,7 +105,13 @@ export default function WindlassControlUI() {
   checkStatus();
   const interval = setInterval(checkStatus, 500);
   return () => clearInterval(interval);
-}, []);  
+}, []);
+
+  useEffect(() => {
+    if (!controllerConnected) {
+      setArmed(false);
+    }
+  }, [controllerConnected]);
 
   const sendManualMove = async (direction) => {
     await fetch("/api/manual", {
@@ -169,11 +177,14 @@ export default function WindlassControlUI() {
           <img src="/anchor-logo.png" alt="Anchor Logo" style={{ height: 180 }} />
         </Box>
 
-        <Box display="flex" justifyContent="center" mb={2}>
-  	  <FormControlLabel
-      control={<Switch checked={armed || autoRunning} onChange={toggleArm} />}
+        <Box display="flex" justifyContent="center" alignItems="center" gap={2} mb={2}>
+          <FormControlLabel
+      control={<Switch checked={armed || autoRunning} onChange={toggleArm} disabled={!controllerConnected} />}
       label="Arm Windlass"
       />
+      <Typography color={controllerConnected ? "green" : "red"}>
+        {controllerConnected ? "Connected" : "Disconnected"}
+      </Typography>
         </Box>
 
         <Tabs value={tabIndex} onChange={(e, newValue) => setTabIndex(newValue)} centered>
