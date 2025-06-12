@@ -138,6 +138,11 @@ class AnchorMate:
         return None
 
     last_ui_heartbeat_time = time.time()
+
+    # track last heartbeat received from the hardware controller
+    controller_heartbeat_value_last = 0
+    last_controller_heartbeat_time = 0
+    controller_connected = False
     
     def __init__(self, **kwargs):
 
@@ -156,6 +161,7 @@ class AnchorMate:
 
         Thread(target=self.run_signalk_websocket).start()
         Thread(target=self.monitor_ui_heartbeat_timeout, daemon=True).start()
+        Thread(target=self.monitor_controller_connection, daemon=True).start()
 
     def monitor_ui_heartbeat_timeout(self):
         while True:
@@ -164,6 +170,14 @@ class AnchorMate:
                 if time.time() - self.last_ui_heartbeat_time > 1.0:
                     print("No UI heartbeat received in >1s, stopping auto.")
                     self.auto_stop()
+
+    def monitor_controller_connection(self):
+        while True:
+            if time.time() - self.last_controller_heartbeat_time <= 4:
+                self.controller_connected = True
+            else:
+                self.controller_connected = False
+            time.sleep(1)
         
     def run_signalk_websocket(self):
         ws_address = f"ws://{self.SIGNALK_SERVER_URL}/signalk/v1/stream?token={self.token}"
@@ -363,15 +377,17 @@ class AnchorMate:
         # print("Received message:", message)
         data = json.loads(message)
         
-        # Initialize a variable to hold the rotations value
+        # Initialize variables to hold values from Signal K
         rotations_value = None
+        controller_heartbeat = None
 
         # Extract the rotations value
         for update in data.get("updates", []):
             for value in update.get("values", []):
                 if value.get("path") == "sensors.windlass.rotations":
                     rotations_value = value.get("value")
-                    break  # Stop searching once we find the rotations value
+                if value.get("path") == "vessels.self.anchor.controller.heartbeat":
+                    controller_heartbeat = value.get("value")
 
         # Check if we found a rotations value and print it
         if rotations_value is not None:
@@ -379,6 +395,11 @@ class AnchorMate:
             if rotations_value > self.rotations_value_last:
                 self.on_pulse_on()
             self.rotations_value_last = rotations_value
+
+        if controller_heartbeat is not None:
+            if controller_heartbeat != self.controller_heartbeat_value_last:
+                self.controller_heartbeat_value_last = controller_heartbeat
+                self.last_controller_heartbeat_time = time.time()
         # else:
             # print("Rotations value not found.")
 
@@ -446,7 +467,10 @@ def heartbeat():
 
 @app.route("/api/status", methods=["GET"])
 def get_status():
-    return jsonify({"autoRunning": anchor.auto_in_progress})
+    return jsonify({
+        "autoRunning": anchor.auto_in_progress,
+        "controllerConnected": anchor.controller_connected
+    })
 
 @app.route("/api/info", methods=["GET"])
 def get_info():
