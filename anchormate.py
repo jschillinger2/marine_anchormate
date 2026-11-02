@@ -6,7 +6,7 @@ import json
 import threading
 from enum import Enum
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+# from flask_cors import CORS
 import os
 import subprocess
 import time
@@ -32,7 +32,7 @@ if not os.path.exists(REACT_BUILD_DIR):
 
 # Initialize Flask app
 app = Flask(__name__, static_folder=REACT_BUILD_DIR, static_url_path="")
-CORS(app)
+# CORS(app)
 
 class Direction(Enum):
     UP = 1
@@ -245,7 +245,7 @@ class AnchorMate:
         
     # called by time in simulation mode to simulate pulse from rotation
     def on_pulse_simulated_pressed(self, a):
-       self.on_pulse_on()
+       self.on_pulse_on(2)
        print("Simulated Rotation")
        time.sleep(0.1)
        self.on_pulse_off()
@@ -258,14 +258,14 @@ class AnchorMate:
         threading.Thread(target=loop, daemon=True).start()
      
     # Define a function to be called whenever the rotation pulse is triggered
-    def on_pulse_on(self):
+    def on_pulse_on(self, delta):
         #global current_depth
         print(f"Pulse detected! Current Depth: {self.current_depth}")
         self.debug_pinstate_pulse = True
         if self.current_direction == Direction.UP:
-            self.current_depth -= self.LENGTH_PER_ROTATION
+            self.current_depth -= self.LENGTH_PER_ROTATION*delta
         elif self.current_direction == Direction.DOWN:
-            self.current_depth += self.LENGTH_PER_ROTATION
+            self.current_depth += self.LENGTH_PER_ROTATION*delta
         else:
             print("Anchor moving despite no engine")
 
@@ -376,8 +376,9 @@ class AnchorMate:
         # Check if we found a rotations value and print it
         if rotations_value is not None:
             print(f"Rotations value: {rotations_value}")
-            if rotations_value > self.rotations_value_last:
-                self.on_pulse_on()
+            delta = rotations_value - self.rotations_value_last
+            if delta > 0:
+                self.on_pulse_on(delta)
             self.rotations_value_last = rotations_value
         # else:
             # print("Rotations value not found.")
